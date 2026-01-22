@@ -1,0 +1,40 @@
+/* css/inkindle.css */
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding: 0;
+    background-color: #fff;
+    color: #000;
+    font-family: serif; /* usa a Bookerly nativa do Kindle */
+}
+
+#toolbar {
+    height: 60px;
+    border-bottom: 2px solid #000;
+    display: flex; align-items: center;
+    padding: 0 10px;
+}
+
+#save-btn {
+    height: 45px;
+    padding: 0 20px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#status {
+    margin-left: 15px;
+    font-size: 12px;
+}
+
+#editor {
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    padding: 20px;
+    outline: none; /* remove a borda azul de foco */
+    font-size: 18px; /* tamanho confortável para leitura E-ink */
+    line-height: 1.6;
+    white-space: pre-wrap; /* mantém as quebras de linha */
+}

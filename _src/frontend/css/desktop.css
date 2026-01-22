@@ -1,0 +1,76 @@
+/* wissen-wasser/_src/frontend/css/desktop.css */
+:root {
+    --bg: #0d1117;          /* Fundo estilo GitHub/JSONBin */
+    --toolbar: #161b22;
+    --editor-bg: #0d1117;   /* Editor fundido ao fundo */
+    --border: #30363d;
+    --accent: #238636;      /* Verde sucesso */
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    margin: 0;
+}
+
+#toolbar {
+    background: var(--toolbar);
+    border-bottom: 1px solid var(--border);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 15px;
+    position: sticky; top: 0; z-index: 100;
+}
+
+button, select, .file-label {
+    background: #21262d;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+button:hover { background: #30363d; border-color: #8b949e; }
+
+#save-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+}
+
+#save-btn:hover { background: #2ea043; }
+
+#editor-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.page {
+    width: 100%;
+    max-width: 900px;
+    min-height: 90vh;
+    padding: 60px 40px;
+    background: var(--editor-bg);
+    color: var(--text);
+    outline: none;
+    line-height: 1.8;
+    font-size: 18px;
+    /* Fonte mono para vibe JSONBin/Obsidian */
+    font-family: 'Fira Code', 'JetBrains Mono', monospace;
+}
+
+/* Placeholder dark */
+.page:empty:before {
+    content: "Comece sua escrita dark aqui...";
+    color: var(--text-muted);
+}

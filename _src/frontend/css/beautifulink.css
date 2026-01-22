@@ -1,0 +1,35 @@
+/* wissen-wasser/_src/frontend/css/beautifulink.css */
+:root {
+    --bg: #1a1a1a;
+    --editor-bg: #262626;
+    --text: #d1d1d1;
+    --border: #404040;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Georgia', serif;
+}
+
+#toolbar {
+    background: #000;
+    border-bottom: 1px solid var(--border);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.page {
+    width: 800px;
+    max-width: 95%;
+    background: var(--editor-bg);
+    margin: 40px auto;
+    padding: 60px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    min-height: 80vh;
+    outline: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Wissen-Wasser Dashboard</title>
+    <link rel="stylesheet" href="css/desktop.css">
+    <style>
+        .ink-card {
+            background: var(--toolbar);
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        .ink-card:hover { border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <strong>WISSEN-WASSER</strong>
+        <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
+    </div>
+    <div id="editor-container" style="flex-direction: column; align-items: center; margin-top: 40px;">
+        <div id="ink-list" style="width: 100%; max-width: 600px;">
+            <p>Carregando seus pensamentos...</p>
+        </div>
+    </div>
+
+    <script>
+        async function loadInks() {
+            const res = await fetch('/list-inks');
+            const inks = await res.json();
+            const list = document.getElementById('ink-list');
+            list.innerHTML = inks.map(id => `
+                <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                    <span>${id}</span>
+                    <small style="color:var(--text-muted)">ver conteúdo →</small>
+                </div>
+            `).join('');
+        }
+        window.onload = loadInks;
+    </script>
+</body>
+</html>
