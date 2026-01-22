@@ -38,3 +38,8 @@ body {
     line-height: 1.6;
     white-space: pre-wrap; /* mantém as quebras de linha */
 }
+
+.page:empty:before {
+    content: "Comece sua escrita buxa aqui...";
+    color: var(--text-muted);
+}
