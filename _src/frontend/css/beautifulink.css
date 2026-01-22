@@ -32,19 +32,20 @@ body {
 
 .page {
     width: 210mm;
-    height: 297mm; /* Altura exata A4 */
+    height: 297mm;      /* Altura fixa A4 */
+    min-height: 297mm;  /* Força a não encolher */
+    max-height: 297mm;  /* Força a não esticar */
     background: white;
-    color: black;
+    color: #1a1a1a;
+    padding: 25mm;
     margin-bottom: 30px;
-    padding: 25mm; /* Margens padrão de impressão */
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
-    overflow: hidden; /* Corta o texto para o JS detectar o estouro */
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    outline: none;
+    overflow: hidden;   /* Corta o texto para o JS detectar */
     line-height: 1.6;
     font-size: 18px;
-    outline: none;
-    cursor: text;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    display: block;     /* Garante comportamento de bloco */
+    position: relative;
 }
 
 /* Esconder páginas extras vazias no Kindle se necessário */

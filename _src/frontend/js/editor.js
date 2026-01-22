@@ -19,38 +19,51 @@ async function initEditor() {
 
 async function setupA4Editor(inkId) {
     editorContainer.innerHTML = '';
-    const status = document.getElementById('status');
-    
-    // 1. Criar primeira página
     const firstPage = createPage();
     editorContainer.appendChild(firstPage);
 
-    // 2. Carregar conteúdo da Nuvem
-    if (status) status.innerText = "Sincronizando...";
-    const content = await fetchInkContent(inkId); 
-    if (content) {
-        firstPage.innerText = content;
-        // Se o conteúdo carregado for grande, distribui em páginas
-        distributeContent(content);
-    }
-    if (status) status.innerText = "Pronto";
+    // Carregamento inicial
+    const content = await fetchInkContent(inkId);
+    if (content) firstPage.innerText = content;
 
-    // 3. Listener de Input (Markdown + Paginação)
-    editorContainer.addEventListener('input', (e) => {
+    // EVENTO DE TECLADO PARA MARKDOWN (Dispara no Espaço)
+    editorContainer.addEventListener('keyup', (e) => {
         const activePage = e.target;
         if (!activePage.classList.contains('page')) return;
 
-        // Markdown Notion-like
-        handleMarkdown(activePage);
+        if (e.key === ' ') {
+            const text = activePage.innerText;
+            // Markdown Notion-like
+            if (text.startsWith('# ')) {
+                activePage.innerText = text.substring(2);
+                document.execCommand('formatBlock', false, 'h1');
+            } else if (text.startsWith('## ')) {
+                activePage.innerText = text.substring(3);
+                document.execCommand('formatBlock', false, 'h2');
+            } else if (text.startsWith('- ')) {
+                activePage.innerText = text.substring(2);
+                document.execCommand('insertUnorderedList');
+            }
+        }
+    });
 
-        // Paginação Estilo Word
+    // EVENTO DE INPUT PARA QUEBRA DE PÁGINA
+    editorContainer.addEventListener('input', (e) => {
+        const activePage = e.target;
+        
+        // Se o conteúdo transbordar a altura fixa de 297mm
         if (activePage.scrollHeight > activePage.offsetHeight) {
+            // Pega o último nó (provavelmente o que causou o estouro)
+            const lastNode = activePage.lastChild;
             const newPage = createPage();
-            activePage.after(newPage);
+            editorContainer.appendChild(newPage);
+            
+            if (lastNode) {
+                newPage.appendChild(lastNode); // Move o excesso para a nova página
+            }
+            
             newPage.focus();
         }
-        
-        localStorage.setItem('cache_' + inkId, getAllPagesContent());
     });
 }
 
