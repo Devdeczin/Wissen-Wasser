@@ -2,66 +2,77 @@
 const editorContainer = document.getElementById('editor-container');
 const isKindle = /kindle|silk|mobile/i.test(navigator.userAgent);
 
-function setupGlobalShortcuts() {
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-            e.preventDefault();
-            manualSave(); // Função que está no seu ink.html ou core.js
-        }
-    });
-}
+// --- CONFIGURAÇÕES DE PAGINAÇÃO ---
+const A4_HEIGHT_PX = 1122; // Aproximado para 297mm em 96dpi
 
-// Importar fonte localmente
-async function handleFontImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const fontName = "CustomFont-" + Math.floor(Math.random() * 1000);
-    const reader = new FileReader();
-
-    reader.onload = async (e) => {
-        const fontData = e.target.result;
-        const fontFace = new FontFace(fontName, fontData);
-        
-        try {
-            const loaded = await fontFace.load();
-            document.fonts.add(loaded);
-            document.getElementById('editor').style.fontFamily = fontName;
-            document.getElementById('status').innerText = "Fonte aplicada!";
-        } catch (err) {
-            alert("Erro ao carregar .ttf");
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
 function initEditor() {
     const urlParams = new URLSearchParams(window.location.search);
     const inkId = urlParams.get('id') || 'temp-ink';
     const savedTheme = localStorage.getItem('ww-theme') || 'desktop';
 
+    // Mostra o InkID no status bar se ele existir
+    const status = document.getElementById('status');
+    if (status) status.innerText = `ID: ${inkId}`;
+
     if (isKindle) {
-        // Esconde botões que o Kindle não suporta
         document.querySelectorAll('.desktop-only').forEach(el => el.style.display = 'none');
         setupKindleEditor(inkId);
     } else {
         setTheme(savedTheme);
-        setupUnifiedEditor(inkId);
+        setupA4Editor(inkId);
     }
     
     setupGlobalShortcuts();
+}
+
+// --- EDITORES ---
+
+function setupA4Editor(inkId) {
+    editorContainer.innerHTML = '';
+    
+    // Tenta carregar conteúdo inicial
+    const savedContent = localStorage.getItem('cache_' + inkId) || '';
+    
+    // Cria a primeira página
+    const firstPage = createPage();
+    editorContainer.appendChild(firstPage);
+    firstPage.innerText = savedContent;
+
+    // Monitoramento de input para Markdown e Paginação
+    editorContainer.addEventListener('input', (e) => {
+        const activePage = e.target;
+        if (!activePage.classList.contains('page')) return;
+
+        // 1. Markdown Notion-like
+        handleMarkdown(activePage);
+
+        // 2. Lógica de Paginação (se o texto estourar a altura da folha)
+        if (activePage.scrollHeight > activePage.offsetHeight) {
+            const nextPage = createPage();
+            activePage.after(nextPage);
+            nextPage.focus();
+        }
+
+        // 3. Salvamento em cache
+        const allText = Array.from(document.querySelectorAll('.page')).map(p => p.innerText).join('\n');
+        localStorage.setItem('cache_' + inkId, allText);
+        
+        const status = document.getElementById('status');
+        if (status) status.innerText = "digitando...";
+    });
+
+    setTimeout(() => firstPage.focus(), 100);
 }
 
 function setupKindleEditor(inkId) {
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');
     editor.id = 'editor';
-    // no Kindle, usamos uma estrutura sem sombras ou margens grandes
     editor.style.width = '100%';
     editor.style.padding = '20px';
     editor.contentEditable = 'true';
     editor.spellcheck = false;
 
-    // carrega o conteúdo
     editor.innerText = localStorage.getItem('cache_' + inkId) || '';
 
     editor.addEventListener('input', () => {
@@ -71,53 +82,38 @@ function setupKindleEditor(inkId) {
     editorContainer.appendChild(editor);
 }
 
-// atualize a chamada do UnifiedEditor para receber o ID
-function setupUnifiedEditor(inkId) {
-    editorContainer.innerHTML = '';
-    const editor = document.createElement('div');
-    editor.id = 'editor';
-    editor.className = 'page';
-    editor.contentEditable = 'true';
-    editor.spellcheck = false;
-    
-    editor.innerText = localStorage.getItem('cache_' + inkId) || '';
+// --- UTILITÁRIOS DE CRIAÇÃO E ESTILO ---
 
-    editor.addEventListener('input', () => {
-        localStorage.setItem('cache_' + inkId, editor.innerText);
-        const status = document.getElementById('status');
-        if (status) status.innerText = "digitando...";
-    });
-
-    editorContainer.appendChild(editor);
-    setTimeout(() => editor.focus(), 100);
+function createPage() {
+    const div = document.createElement('div');
+    div.className = 'page'; // Usa sua classe CSS para o estilo A4
+    div.contentEditable = 'true';
+    div.spellcheck = false;
+    return div;
 }
 
-function setupUnifiedEditor() {
-    // Limpa o container antes de criar
-    editorContainer.innerHTML = '';
+function handleMarkdown(element) {
+    const text = element.innerHTML;
     
-    const editor = document.createElement('div');
-    editor.id = 'editor';
-    editor.className = 'page';
-    editor.contentEditable = 'true';
-    editor.spellcheck = false;
-    
-    const inkId = new URLSearchParams(window.location.search).get('id') || 'temp-ink';
-    editor.innerText = localStorage.getItem('cache_' + inkId) || '';
-
-    editor.addEventListener('input', () => {
-        localStorage.setItem('cache_' + inkId, editor.innerText);
-        const status = document.getElementById('status');
-        if (status) status.innerText = "digitando...";
-    });
-
-    editorContainer.appendChild(editor);
-    
-    // Garantia de clique: se o container estiver vazio, o editor precisa de altura
-    setTimeout(() => editor.focus(), 100);
+    // Notion-like: Detecta padrão e transforma o bloco imediatamente
+    if (text.includes('#&nbsp;')) {
+        document.execCommand('formatBlock', false, 'h1');
+        element.innerHTML = text.replace('#&nbsp;', '');
+    } else if (text.includes('##&nbsp;')) {
+        document.execCommand('formatBlock', false, 'h2');
+        element.innerHTML = text.replace('##&nbsp;', '');
+    } else if (text.includes('-&nbsp;')) {
+        document.execCommand('insertUnorderedList');
+        element.innerHTML = text.replace('-&nbsp;', '');
+    }
 }
 
-// --- FUNCIONALIDADES NOVAS ---
+function changeFontSize(size) {
+    const pages = document.querySelectorAll('.page, #editor');
+    pages.forEach(p => p.style.fontSize = size + 'px');
+}
+
+// --- FUNÇÕES MANTIDAS DO ORIGINAL ---
 
 function setupGlobalShortcuts() {
     document.addEventListener('keydown', (e) => {
@@ -128,8 +124,7 @@ function setupGlobalShortcuts() {
     });
 }
 
-// Importador de Fontes Locais (.ttf)
-function handleFontImport(event) {
+async function handleFontImport(event) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -144,21 +139,23 @@ function handleFontImport(event) {
             const loadedFace = await fontFace.load();
             document.fonts.add(loadedFace);
             
-            // Aplica a fonte ao editor
-            const editor = document.getElementById('editor');
-            if (editor) editor.style.fontFamily = fontName;
+            const editors = document.querySelectorAll('.page, #editor');
+            editors.forEach(ed => ed.style.fontFamily = fontName);
             
-            // Adiciona ao seletor de fontes para referência
             const selector = document.getElementById('font-selector');
-            const opt = document.createElement('option');
-            opt.value = fontName;
-            opt.innerText = `Local: ${fontName}`;
-            opt.selected = true;
-            selector.appendChild(opt);
+            if (selector) {
+                const opt = document.createElement('option');
+                opt.value = fontName;
+                opt.innerText = `Local: ${fontName}`;
+                opt.selected = true;
+                selector.appendChild(opt);
+            }
             
-            alert(`Fonte "${fontName}" carregada com sucesso!`);
+            const status = document.getElementById('status');
+            if (status) status.innerText = "Fonte aplicada!";
         } catch (err) {
             console.error("Erro ao carregar fonte:", err);
+            alert("Erro ao carregar .ttf");
         }
     };
     reader.readAsArrayBuffer(file);
@@ -167,8 +164,10 @@ function handleFontImport(event) {
 function setTheme(themeName) {
     if (isKindle) return;
     const themeLink = document.getElementById('theme-style');
-    themeLink.href = `css/${themeName}.css`;
-    localStorage.setItem('ww-theme', themeName);
+    if (themeLink) {
+        themeLink.href = `css/${themeName}.css`;
+        localStorage.setItem('ww-theme', themeName);
+    }
 }
 
 window.onload = initEditor;
