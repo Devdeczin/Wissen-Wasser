@@ -8,60 +8,77 @@ const A4_HEIGHT_PX = 1122; // Aproximado para 297mm em 96dpi
 function initEditor() {
     const urlParams = new URLSearchParams(window.location.search);
     const inkId = urlParams.get('id') || 'temp-ink';
-    const savedTheme = localStorage.getItem('ww-theme') || 'desktop';
-
-    // Mostra o InkID no status bar se ele existir
-    const status = document.getElementById('status');
-    if (status) status.innerText = `ID: ${inkId}`;
+    
+    // Problema 2: Mostrar InkID
+    const display = document.getElementById('ink-id-display');
+    if (display) display.innerText = `ID: ${inkId}`;
 
     if (isKindle) {
-        document.querySelectorAll('.desktop-only').forEach(el => el.style.display = 'none');
         setupKindleEditor(inkId);
     } else {
-        setTheme(savedTheme);
         setupA4Editor(inkId);
     }
-    
-    setupGlobalShortcuts();
 }
-
-// --- EDITORES ---
 
 function setupA4Editor(inkId) {
     editorContainer.innerHTML = '';
     
-    // Tenta carregar conteúdo inicial
-    const savedContent = localStorage.getItem('cache_' + inkId) || '';
-    
-    // Cria a primeira página
+    // Cria a primeira folha
     const firstPage = createPage();
     editorContainer.appendChild(firstPage);
-    firstPage.innerText = savedContent;
 
-    // Monitoramento de input para Markdown e Paginação
-    editorContainer.addEventListener('input', (e) => {
+    // Carrega conteúdo inicial
+    fetchInkContent(inkId).then(content => {
+        if(content) firstPage.innerText = content;
+    });
+
+    // Evento unificado para Markdown e Paginação
+    editorContainer.addEventListener('keyup', (e) => {
         const activePage = e.target;
         if (!activePage.classList.contains('page')) return;
 
-        // 1. Markdown Notion-like
-        handleMarkdown(activePage);
+        // Problema 3: Markdown Notion-like
+        handleMarkdown(activePage, e);
 
-        // 2. Lógica de Paginação (se o texto estourar a altura da folha)
+        // Problema 1: Divisão de páginas (Estilo Word)
+        // Se a altura do texto (scrollHeight) for maior que a folha (297mm)
         if (activePage.scrollHeight > activePage.offsetHeight) {
-            const nextPage = createPage();
-            activePage.after(nextPage);
-            nextPage.focus();
+            const newPage = createPage();
+            editorContainer.appendChild(newPage);
+            newPage.focus();
         }
-
-        // 3. Salvamento em cache
-        const allText = Array.from(document.querySelectorAll('.page')).map(p => p.innerText).join('\n');
-        localStorage.setItem('cache_' + inkId, allText);
-        
-        const status = document.getElementById('status');
-        if (status) status.innerText = "digitando...";
     });
+}
 
-    setTimeout(() => firstPage.focus(), 100);
+function createPage() {
+    const div = document.createElement('div');
+    div.className = 'page';
+    div.contentEditable = 'true';
+    div.spellcheck = false;
+    return div;
+}
+
+function handleMarkdown(element, event) {
+    // Só dispara ao apertar Espaço (Markdown Notion costuma ser assim)
+    if (event.key !== ' ') return;
+
+    const content = element.innerText;
+    
+    // H1: Se a linha começa com # 
+    if (content.startsWith('# ')) {
+        element.innerText = content.substring(2);
+        document.execCommand('formatBlock', false, 'h1');
+    }
+    // H2: Se começa com ## 
+    else if (content.startsWith('## ')) {
+        element.innerText = content.substring(3);
+        document.execCommand('formatBlock', false, 'h2');
+    }
+    // Lista: Se começa com - 
+    else if (content.startsWith('- ')) {
+        element.innerText = content.substring(2);
+        document.execCommand('insertUnorderedList');
+    }
 }
 
 function setupKindleEditor(inkId) {
