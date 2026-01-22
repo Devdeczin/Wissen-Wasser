@@ -34,18 +34,62 @@ async function handleFontImport(event) {
     };
     reader.readAsArrayBuffer(file);
 }
-
 function initEditor() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inkId = urlParams.get('id') || 'temp-ink';
     const savedTheme = localStorage.getItem('ww-theme') || 'desktop';
-    if (!isKindle) setTheme(savedTheme);
 
     if (isKindle) {
-        setupKindleEditor();
+        // Esconde botões que o Kindle não suporta
+        document.querySelectorAll('.desktop-only').forEach(el => el.style.display = 'none');
+        setupKindleEditor(inkId);
     } else {
-        setupUnifiedEditor();
+        setTheme(savedTheme);
+        setupUnifiedEditor(inkId);
     }
     
     setupGlobalShortcuts();
+}
+
+function setupKindleEditor(inkId) {
+    editorContainer.innerHTML = '';
+    const editor = document.createElement('div');
+    editor.id = 'editor';
+    // no Kindle, usamos uma estrutura sem sombras ou margens grandes
+    editor.style.width = '100%';
+    editor.style.padding = '20px';
+    editor.contentEditable = 'true';
+    editor.spellcheck = false;
+
+    // carrega o conteúdo
+    editor.innerText = localStorage.getItem('cache_' + inkId) || '';
+
+    editor.addEventListener('input', () => {
+        localStorage.setItem('cache_' + inkId, editor.innerText);
+    });
+
+    editorContainer.appendChild(editor);
+}
+
+// atualize a chamada do UnifiedEditor para receber o ID
+function setupUnifiedEditor(inkId) {
+    editorContainer.innerHTML = '';
+    const editor = document.createElement('div');
+    editor.id = 'editor';
+    editor.className = 'page';
+    editor.contentEditable = 'true';
+    editor.spellcheck = false;
+    
+    editor.innerText = localStorage.getItem('cache_' + inkId) || '';
+
+    editor.addEventListener('input', () => {
+        localStorage.setItem('cache_' + inkId, editor.innerText);
+        const status = document.getElementById('status');
+        if (status) status.innerText = "digitando...";
+    });
+
+    editorContainer.appendChild(editor);
+    setTimeout(() => editor.focus(), 100);
 }
 
 function setupUnifiedEditor() {

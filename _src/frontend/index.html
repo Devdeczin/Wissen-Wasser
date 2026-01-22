@@ -21,11 +21,12 @@
 <body>
     <div id="toolbar">
         <strong>WISSEN-WASSER</strong>
-        <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
-    </div>
-    <div id="editor-container" style="flex-direction: column; align-items: center; margin-top: 40px;">
-        <div id="ink-list" style="width: 100%; max-width: 600px;">
-            <p>Carregando seus pensamentos...</p>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="manual-id" placeholder="Digite um InkID..." 
+                style="background:#21262d; border:1px solid var(--border); color:white; border-radius:4px; padding:0 10px;">
+            <button onclick="location.href='ink.html?id=' + document.getElementById('manual-id').value" 
+                    style="background: var(--border);">ACESSAR</button>
+            <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
         </div>
     </div>
 

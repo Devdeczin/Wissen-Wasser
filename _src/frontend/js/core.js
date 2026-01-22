@@ -24,3 +24,16 @@ async function apiSaveInk(id, content) {
         return false;
     }
 }
+
+async function fetchInkContent(id) {
+    if (id === 'temp-ink') return "";
+    try {
+        const response = await fetch(`/ink/${id}`);
+        if (response.ok) {
+            return await response.text();
+        }
+    } catch (err) {
+        console.warn("Usando apenas cache local");
+    }
+    return localStorage.getItem('cache_' + id) || "";
+}
