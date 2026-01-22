@@ -6,9 +6,7 @@ import ../other/[config, types]
 settings:
     port = conf.port.Port
     bindAddr = "0.0.0.0"
-    # staticDir mapeia os arquivos físicos. 
-    # ww -> nim -> backend -> _src -> frontend
-    staticDir = "../../../frontend" 
+    staticDir = "frontend" 
 
 routes:
     # --- FRONTEND ---
