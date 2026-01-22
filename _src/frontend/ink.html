@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Editor - Wissen-Wasser</title>
-    <link id="theme-style" rel="stylesheet" href="css/inkindle.css">
+    <link id="theme-style" rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
     <div id="toolbar">
@@ -24,35 +24,47 @@
             <input type="file" id="font-upload" accept=".ttf" onchange="handleFontImport(event)" style="display:none">
         </label>
 
-        <span id="status">Pronto</span>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
+            <span id="ink-id-display" style="font-family: monospace; font-size: 12px; opacity: 0.6;">ID: temp-ink</span>
+            <span id="status">Pronto</span>
+        </div>
     </div>
 
-    <div id="editor-container"></div>
+    <div id="editor-container">
+        </div>
     
     <script src="js/core.js"></script>
     <script src="js/editor.js"></script>
     <script>
-        // Função global de salvamento ajustada para a lógica de páginas
         async function manualSave() {
             const status = document.getElementById('status');
-            status.innerText = "enviando...";
+            status.innerText = "Sincronizando...";
             
-            // Pega o ID da URL
-            const inkId = new URLSearchParams(window.location.search).get('id') || 'temp-ink';
+            const urlParams = new URLSearchParams(window.location.search);
+            const inkId = urlParams.get('id') || 'temp-ink';
             
-            // Pega o texto de dentro da página atual (seja Kindle ou Desktop)
-            const editorElem = document.querySelector('.page') || document.getElementById('editor');
-            const content = editorElem ? editorElem.innerText : "";
+            // Coleta texto de TODAS as páginas (A4) ou do editor único (Kindle)
+            const pages = document.querySelectorAll('.page');
+            let content = "";
+            
+            if (pages.length > 0) {
+                content = Array.from(pages).map(p => p.innerText).join('\n');
+            } else {
+                const singleEditor = document.getElementById('editor');
+                content = singleEditor ? singleEditor.innerText : "";
+            }
             
             try {
-                const success = await apiSaveInk(inkId, content);
-                if (success) {
-                    status.innerText = "salvo na nuvem!";
+                const result = await apiSaveInk(inkId, content);
+                if (result) {
+                    status.innerText = "Salvo na nuvem!";
+                    // Se o ID mudou (era temp-ink), atualiza o display
+                    document.getElementById('ink-id-display').innerText = `ID: ${result}`;
                 } else {
-                    status.innerText = "erro rede (em cache)";
+                    status.innerText = "Erro (salvo local)";
                 }
             } catch (e) {
-                status.innerText = "offline (em cache)";
+                status.innerText = "Offline (cache)";
             }
         }
     </script>

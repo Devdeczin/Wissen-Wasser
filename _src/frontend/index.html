@@ -14,33 +14,47 @@
             display: flex;
             justify-content: space-between;
             cursor: pointer;
+            transition: 0.2s;
         }
-        .ink-card:hover { border-color: var(--accent); }
+        .ink-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        #ink-list { width: 100%; max-width: 800px; margin: 40px auto; padding: 0 20px; }
     </style>
 </head>
 <body>
     <div id="toolbar">
         <strong>WISSEN-WASSER</strong>
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; margin-left: auto;">
             <input type="text" id="manual-id" placeholder="Digite um InkID..." 
-                style="background:#21262d; border:1px solid var(--border); color:white; border-radius:4px; padding:0 10px;">
-            <button onclick="location.href='ink.html?id=' + document.getElementById('manual-id').value" 
+                style="background:#21262d; border:1px solid var(--border); color:white; border-radius:4px; padding:0 10px; outline: none;">
+            <button onclick="const id = document.getElementById('manual-id').value; if(id) location.href='ink.html?id=' + id" 
                     style="background: var(--border);">ACESSAR</button>
             <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
         </div>
     </div>
 
+    <div id="ink-list">
+        <p style="text-align: center; color: var(--text-muted);">Carregando fluxos de pensamento...</p>
+    </div>
+
     <script>
         async function loadInks() {
-            const res = await fetch('/list-inks');
-            const inks = await res.json();
-            const list = document.getElementById('ink-list');
-            list.innerHTML = inks.map(id => `
-                <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
-                    <span>${id}</span>
-                    <small style="color:var(--text-muted)">ver conteúdo →</small>
-                </div>
-            `).join('');
+            try {
+                const res = await fetch('/list-inks');
+                const inks = await res.json();
+                const list = document.getElementById('ink-list');
+                if (inks.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Nenhum Ink encontrado.</p>';
+                    return;
+                }
+                list.innerHTML = inks.map(id => `
+                    <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                        <span style="font-family: monospace; font-weight: bold;">${id}</span>
+                        <small style="color:var(--text-muted)">abrir documento →</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('ink-list').innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar lista.</p>';
+            }
         }
         window.onload = loadInks;
     </script>
