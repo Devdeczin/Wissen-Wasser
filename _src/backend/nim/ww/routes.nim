@@ -83,21 +83,10 @@ routes:
             }
 
         post "/dev/ink/delete-by-prefix":
-            if not isDev:
-                halt(Http403, "Dev routes disabled")
-
-            if request.body.len == 0:
-                halt(Http400, "Missing request body")
+            requireDev()
 
             let body = parseJson(request.body)
-
-            if not body.hasKey("prefix"):
-                halt(Http400, "Expected JSON: { prefix: \"abcd\" }")
-
             let prefix = body["prefix"].getStr()
-
-            if prefix.len == 0:
-                halt(Http400, "Prefix cannot be empty")
 
             let deleted = deleteInksByPrefix(prefix)
 

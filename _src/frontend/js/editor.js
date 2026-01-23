@@ -65,13 +65,26 @@ async function setupA4Editor(inkId) {
             newPage.focus();
         }
     });
+
+    const cloudData = await fetchInkContent(inkId); 
+    
+    try {
+        // Tenta parsear como JSON caso o backend envie um objeto
+        const data = JSON.parse(cloudData);
+        // Se for um dicionário { "content": "..." }, extrai o texto
+        firstPage.innerText = data.content || ""; 
+    } catch (e) {
+        // Se não for JSON (texto puro), usa direto
+        firstPage.innerText = cloudData;
+    }
 }
 
 function createPage() {
     const div = document.createElement('div');
     div.className = 'page';
     div.contentEditable = 'true';
-    div.spellcheck = false;
+    div.spellcheck = true; // Ativa explicitamente
+    div.setAttribute('lang', 'pt-BR'); // Define o dicionário para o Zen/Mozilla
     return div;
 }
 

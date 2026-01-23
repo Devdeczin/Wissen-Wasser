@@ -1,10 +1,24 @@
 # wissen-wasser/_src/backend/nim/ww/config.nim
 import os, strutils
 
-type Config* = object
-    env*: string
-    port*: int
-    jsonbinApiKey*: string
+type 
+    Config* = object
+        env*: string
+        port*: int
+        jsonbinApiKey*: string
+        
+    AppConfig* = object
+        port*: int
+        jsonbinApiKey*: string
+        jsonbinIndexBinId*: string
+
+let conf* = AppConfig(
+    port: 5000,
+    jsonbinApiKey: getEnv("JSONBIN_API_KEY", ""),
+    jsonbinIndexBinId: getEnv("JSONBIN_INDEX_BIN_ID", "")
+)
+
+let isDev* = DEV_ENABLED or getEnv("WW_DEV", "0") == "1"
 
 proc loadEnvManual(filename: string) =
     if not fileExists(filename): return

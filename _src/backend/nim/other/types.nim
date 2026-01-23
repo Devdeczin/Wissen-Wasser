@@ -52,6 +52,10 @@ template textResp*(s: string, code: HttpCode = Http200) =
 template jsonResp*(n: JsonNode, code: HttpCode = Http200) =
     resp(code, $n, "application/json")
 
+proc requireDev*() =
+    if not isDev:
+        halt(Http403, "Dev routes disabled")
+
 # helpers (temporários):
 proc nowTs*(): TimeStamp =
     TimeStamp(getTime().toUnix())

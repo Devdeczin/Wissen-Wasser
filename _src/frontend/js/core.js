@@ -67,6 +67,15 @@ async function fetchInkContent(id) {
  * Ela detecta o ID atual e o conteúdo de todas as páginas.
  */
 async function manualSave() {
+    const pagesContent = getAllPagesContent();
+    // Transforma o conteúdo em um dicionário JSON
+    const payload = JSON.stringify({
+        content: pagesContent,
+        last_modified: Date.now()
+    });
+
+    const result1 = await apiSaveInk(inkId, payload);
+
     const status = document.getElementById('status');
     if (status) status.innerText = "Sincronizando...";
 
@@ -98,4 +107,26 @@ async function manualSave() {
     } else {
         if (status) status.innerText = "Erro ao salvar (mantido em cache local)";
     }
+}
+
+async function fetchInkContent(id) {
+    if (!id || id === 'temp-ink') return "";
+
+    try {
+        const response = await fetch(`/ink/${id}`);
+        if (response.ok) {
+            const data = await response.text(); 
+            try {
+                // Se o backend enviar um JSON estruturado do JSONBin
+                const json = JSON.parse(data);
+                // Retorna apenas a parte do texto para o editor
+                return json.record ? json.record.content : json.content || data;
+            } catch (e) {
+                return data; // Se for texto puro
+            }
+        }
+    } catch (err) {
+        console.warn("Usando cache local.");
+    }
+    return localStorage.getItem('cache_' + id) || "";
 }
