@@ -12,6 +12,28 @@ const
     MainFile* = "main.ww"
     HistoryDir* = "history"
 
+proc deleteAllInks*() =
+    let inkRoot = rootPath() / "ink"
+    if dirExists(inkRoot):
+        removeDir(inkRoot)
+
+proc deleteInks*(ids: seq[InkId]) =
+    let inkRoot = rootPath() / "ink"
+
+    for id in ids:
+        let dir = inkRoot / $id
+        if dirExists(dir):
+            removeDir(dir)
+
+proc deleteInksByPrefix*(prefix: string) =
+    let inkRoot = rootPath() / "ink"
+    if not dirExists(inkRoot): return
+
+    for kind in walkDir(inkRoot):
+        let name = extractFilename(kind.path)
+        if name.startsWith(prefix):
+            removeDir(kind.path)
+            
 proc rootPath*(): string  =
     getHomeDir() / WwRoot
 

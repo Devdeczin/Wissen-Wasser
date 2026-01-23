@@ -69,18 +69,17 @@ proc l_archive_ink*(idStr: string): string =
 
 proc l_get_ink_content*(idStr: string): string =
     let id = toInkId(idStr)
-    
-    # 1. Tenta local
+
+    # Cache local (opcional)
     if inkExists(id):
         return loadDocument(id).body.content
-    
-    # 2. Tenta nuvem se local falhar (Crucial para o Notebook)
+
+    # Fonte da verdade
     let cloudData = fetchFromRemote(idStr)
     if cloudData != "":
-        # Opcional: Recria o arquivo local para não precisar baixar de novo no próximo refresh
         var doc = newDotWw(id)
         overwrite(doc, cloudData)
         saveDocument(doc)
         return cloudData
-        
-    return ""
+
+    ""
