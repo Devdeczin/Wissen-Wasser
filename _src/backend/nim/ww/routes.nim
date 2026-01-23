@@ -8,6 +8,8 @@ settings:
     bindAddr = "0.0.0.0"
     staticDir = "frontend"
 
+const DEV_ENABLED = defined(dev)
+
 routes:
     # --- FRONTEND ---
     get "/":
@@ -54,55 +56,56 @@ routes:
         resp Http200, l_archive_ink(@"id"), "application/json"
 
     # Dev
-    post "/dev/list-local-cache":
-        if not isDev:
-            halt(Http403, "Dev routes disabled")
+    when DEV_ENABLED:
+        post "/dev/list-local-cache":
+            if not isDev:
+                halt(Http403, "Dev routes disabled")
 
-        let path = getHomeDir() / ".wissen-wasser" / "ink"
-        var files: seq[string] = @[]
+            let path = getHomeDir() / ".wissen-wasser" / "ink"
+            var files: seq[string] = @[]
 
-        if dirExists(path):
-            for kind, f in walkDir(path):
-                if kind == pcDir:
-                    files.add(extractFilename(f))
+            if dirExists(path):
+                for kind, f in walkDir(path):
+                    if kind == pcDir:
+                        files.add(extractFilename(f))
 
-        resp %files
+            resp %files
 
-    post "/dev/ink/delete":
-        let body = parseJson(request.body)
-        let ids = body["ids"].getElems().mapIt(it.getStr())
+        post "/dev/ink/delete":
+            let body = parseJson(request.body)
+            let ids = body["ids"].getElems().mapIt(it.getStr())
 
-        deleteInksByString(ids)
+            deleteInksByString(ids)
 
-        resp %*{
-            "status": "ok",
-            "deleted": ids.len
-        }
+            resp %*{
+                "status": "ok",
+                "deleted": ids.len
+            }
 
-    post "/dev/ink/delete-by-prefix":
-        if not isDev:
-            halt(Http403, "Dev routes disabled")
+        post "/dev/ink/delete-by-prefix":
+            if not isDev:
+                halt(Http403, "Dev routes disabled")
 
-        if request.body.len == 0:
-            halt(Http400, "Missing request body")
+            if request.body.len == 0:
+                halt(Http400, "Missing request body")
 
-        let body = parseJson(request.body)
+            let body = parseJson(request.body)
 
-        if not body.hasKey("prefix"):
-            halt(Http400, "Expected JSON: { prefix: \"abcd\" }")
+            if not body.hasKey("prefix"):
+                halt(Http400, "Expected JSON: { prefix: \"abcd\" }")
 
-        let prefix = body["prefix"].getStr()
+            let prefix = body["prefix"].getStr()
 
-        if prefix.len == 0:
-            halt(Http400, "Prefix cannot be empty")
+            if prefix.len == 0:
+                halt(Http400, "Prefix cannot be empty")
 
-        let deleted = deleteInksByPrefix(prefix)
+            let deleted = deleteInksByPrefix(prefix)
 
-        resp %*{
-            "status": "ok",
-            "prefix": prefix,
-            "deleted": deleted
-        }
+            resp %*{
+                "status": "ok",
+                "prefix": prefix,
+                "deleted": deleted
+            }
 
     # Fallback para erros
     error Http404:
