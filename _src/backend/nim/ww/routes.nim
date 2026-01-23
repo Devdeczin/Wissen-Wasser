@@ -63,8 +63,8 @@ routes:
 
         if dirExists(path):
             for kind, f in walkDir(path):
-            if kind == pcDir:
-                files.add(extractFilename(f))
+                if kind == pcDir:
+                    files.add(extractFilename(f))
 
         resp %files
 
