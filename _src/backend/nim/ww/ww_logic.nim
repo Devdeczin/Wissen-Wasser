@@ -70,20 +70,17 @@ proc l_archive_ink*(idStr: string): string =
 proc l_get_ink_content*(idStr: string): string =
     let id = toInkId(idStr)
     
-    # 1. Tenta carregar localmente
+    # 1. Tenta local
     if inkExists(id):
-        let doc = loadDocument(id)
-        return doc.body.content
+        return loadDocument(id).body.content
     
-    # 2. Se não existe local (ex: abriu no Notebook mas foi criado no Kindle)
-    # Tenta buscar no JSONBin através do mapeamento
-    echo "Ink local não encontrado. Buscando na nuvem..."
-    let cloudContent = fetchFromRemote(idStr)
-    
-    if cloudContent != "":
+    # 2. Tenta nuvem se local falhar (Crucial para o Notebook)
+    let cloudData = fetchFromRemote(idStr)
+    if cloudData != "":
+        # Opcional: Recria o arquivo local para não precisar baixar de novo no próximo refresh
         var doc = newDotWw(id)
-        overwrite(doc, cloudContent)
-        saveDocument(doc) 
-        return cloudContent
+        overwrite(doc, cloudData)
+        saveDocument(doc)
+        return cloudData
         
     return ""
