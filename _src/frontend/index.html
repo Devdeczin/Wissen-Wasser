@@ -97,8 +97,9 @@
 
         async function loadDashboard() {
             const inkListContainer = document.getElementById('ink-list');
+            const publicListContainer = document.getElementById('public-list');
             
-            // Pega todos os IDs que existem no localStorage (cache do navegador)
+            // Pega as chaves do localStorage para filtrar a persistência
             const cachedIds = Object.keys(localStorage)
                 .filter(k => k.startsWith('cache_'))
                 .map(k => k.replace('cache_', ''));
@@ -116,17 +117,18 @@
                 return;
             }
 
+            // LÓGICA DESKTOP COM FILTRO DE CACHE
             try {
-                // Busca a lista total do servidor
+                // 1. Meus Inks
                 const res = await fetch('/list-inks');
+                if (!res.ok) throw new Error("Erro ao buscar lista");
                 const serverInks = await res.json();
 
-                // FILTRO DE PERSISTÊNCIA: 
-                // Só mostra o Ink se o ID retornado pelo servidor estiver no cachedIds do navegador
+                // FILTRO CRUCIAL: Só mostra se estiver no cache do navegador
                 const myInks = serverInks.filter(id => cachedIds.includes(id));
 
                 if (myInks.length === 0) {
-                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Sua lista está vazia.</p>';
+                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum Ink encontrado no cache local.</p>';
                 } else {
                     inkListContainer.innerHTML = myInks.map(id => `
                         <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
@@ -135,18 +137,25 @@
                     `).join('');
                 }
 
-                // Carrega Feed Público (independente do cache local)
+                // 2. Fluxos Públicos
                 const resPublic = await fetch('/ink/findpublic/');
+                if (!resPublic.ok) throw new Error("Erro ao buscar públicos");
                 const publics = await resPublic.json();
-                document.getElementById('public-list').innerHTML = publics.map(ink => `
-                    <div class="public-item" onclick="location.href='ink.html?id=${ink.id}'">
-                        <div style="font-weight: bold;">${ink.id}</div>
-                        <div style="opacity: 0.6; font-size: 11px;">${ink.preview}</div>
-                    </div>
-                `).join('');
+                
+                if (publics.length === 0) {
+                    publicListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum fluxo público disponível.</p>';
+                } else {
+                    publicListContainer.innerHTML = publics.map(ink => `
+                        <div class="public-item" onclick="location.href='ink.html?id=${ink.id}'">
+                            <div style="font-weight: bold;">${ink.id}</div>
+                            <div style="opacity: 0.6; font-size: 11px;">${ink.preview}</div>
+                        </div>
+                    `).join('');
+                }
             } catch (e) {
-                inkListContainer.innerText = "Erro ao sincronizar.";
-                console.error("Falha no carregamento desktop:", e);
+                inkListContainer.innerText = "Erro na sincronização.";
+                publicListContainer.innerText = "Não foi possível carregar fluxos públicos.";
+                console.error("Erro no Dashboard:", e);
             }
         }
     </script>
