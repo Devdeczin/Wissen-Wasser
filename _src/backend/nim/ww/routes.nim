@@ -26,14 +26,20 @@ routes:
             resp Http200, $publicInks, "application/json"
 
     get "/list-inks":
-        {.cast(gcsafe).}:
-            var files: seq[string] = @[]
-            let path = getHomeDir() / ".wissen-wasser" / "ink"
-            if dirExists(path):
-                for kind, file in walkDir(path):
-                    if kind == pcDir:
-                        files.add(extractFilename(file))
-            resp %files
+            {.cast(gcsafe).}:
+                var files: seq[string] = @[]
+                let path = getHomeDir() / ".wissen-wasser" / "ink"
+                
+                if dirExists(path):
+                    try:
+                        for kind, file in walkDir(path):
+                            if kind == pcDir:
+                                files.add(extractFilename(file))
+                    except:
+                        echo " [ERRO] Falha ao ler diretório de inks"
+                
+                # Sempre retorna um array JSON, mesmo que @[]
+                resp Http200, $(%files), "application/json"
 
     # --- API ---
     get "/ping":
