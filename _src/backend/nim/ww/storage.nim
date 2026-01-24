@@ -1,7 +1,6 @@
 # wissen-wasse/_src/backend/nim/ww/storage.nim
 # persistência local do Wissen Wasser
 # confia, mas não confia
-
 import os, strutils, json
 import dotww, inkid
 import ../other/types
@@ -11,36 +10,6 @@ const
     InkDir* = "ink"
     MainFile* = "main.ww"
     HistoryDir* = "history"
-
-proc deleteInksByPrefix*(prefix: string): int =
-    let base = rootPath() / InkDir
-    var count = 0
-
-    if not dirExists(base):
-        return 0
-
-    for kind, path in walkDir(base):
-        if kind == pcDir and extractFilename(path).startsWith(prefix):
-            removeDir(path)
-            count.inc
-
-    count
-
-proc deleteInksByString*(ids: seq[string]) =
-    for idStr in ids:
-        let id = toInkId(idStr)
-        let path = inkPath(id)
-        if dirExists(path):
-            removeDir(path)
-
-proc deleteInksByPrefix*(prefix: string) =
-    let inkRoot = rootPath() / "ink"
-    if not dirExists(inkRoot): return
-
-    for kind in walkDir(inkRoot):
-        let name = extractFilename(kind.path)
-        if name.startsWith(prefix):
-            removeDir(kind.path)
             
 proc rootPath*(): string  =
     getHomeDir() / WwRoot
@@ -87,3 +56,24 @@ proc preview*(doc: WwDocument, maxLen: int = 512): string  =
         doc.body.content
     else:
         doc.body.content[0 ..< maxLen] & "…"
+
+proc deleteInksByPrefix*(prefix: string): int =
+    let base = rootPath() / InkDir
+    var count = 0
+
+    if not dirExists(base):
+        return 0
+
+    for kind, path in walkDir(base):
+        if kind == pcDir and extractFilename(path).startsWith(prefix):
+            removeDir(path)
+            count.inc
+
+    count
+
+proc deleteInksByString*(ids: seq[string]) =
+    for idStr in ids:
+        let id = toInkId(idStr)
+        let path = inkPath(id)
+        if dirExists(path):
+            removeDir(path)

@@ -1,28 +1,26 @@
 # wissen-wasse/_src/backend/ww/other/types.nim
-import times, json, jester # nunca pensei que ia importar lib algo em um types
+# ww/types.nim
+import times, json, os
 
-const 
+const
     InkEntropy* = 0xC0FFEE
     WWSeed* = "wissen-wasser"
     InkFragmentSize* = 4
 
-type 
-    # tipos básicos
-    InkId*      = distinct string
-    TimeStamp*  = distinct uint64
+type
+    InkId*     = distinct string
+    Timestamp* = distinct uint64
 
-    # enumerações semânticas
     WwDocState* = enum
-        wdsDraft        # criado, mas não estabilizado
-        wdsActive       # em uso normal
-        wdsArchived     # congelado, somente leitura
+        wdsDraft
+        wdsActive
+        wdsArchived
 
     WwMutationKind* = enum
-        wmkAppend       # acrescenta texto
-        wmkOverwrite    # substitui conteúdo
-        wmkAnnotate     # anotação marginal futura
-    
-    # estruturas nucleares
+        wmkAppend
+        wmkOverwrite
+        wmkAnnotate
+
     WwHeader* = object
         inkid*: InkId
         createdAt*: Timestamp
@@ -36,36 +34,20 @@ type
     WwDocument* = object
         header*: WwHeader
         body*: WwBody
-    
-    # mutação
+
     WwMutation* = object
         kind*: WwMutationKind
         payload*: string
         timestamp*: Timestamp
-    
-# só pra ficar global
-# se eu deixar no routes: logic importa routes, routes importa logic
-# resultado: OUROBORUS
-template textResp*(s: string, code: HttpCode = Http200) =
-    resp(code, s)
 
-template jsonResp*(n: JsonNode, code: HttpCode = Http200) =
-    resp(code, $n, "application/json")
+const DEV_ENABLED* = defined(dev)
+let isDev* = DEV_ENABLED or getEnv("WW_DEV", "0") == "1"
 
-proc requireDev*() =
-    if not isDev:
-        halt(Http403, "Dev routes disabled")
+proc nowTs*(): Timestamp =
+    Timestamp(getTime().toUnix())
 
-# helpers (temporários):
-proc nowTs*(): TimeStamp =
-    TimeStamp(getTime().toUnix())
-
-# conversões (possivelmente segura)
-proc `$`*(id: InkId): string =
-    string(id)
-
-proc toInkId*(s: string): InkId =
-    InkId(s)
+proc `$`*(id: InkId): string = string(id)
+proc toInkId*(s: string): InkId = InkId(s)
 
 proc `$`*(ts: Timestamp): string =
     $(int64(ts))

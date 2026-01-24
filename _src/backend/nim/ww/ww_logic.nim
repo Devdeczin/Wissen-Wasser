@@ -69,17 +69,19 @@ proc l_archive_ink*(idStr: string): string =
 
 proc l_get_ink_content*(idStr: string): string =
     let id = toInkId(idStr)
-
-    # Cache local (opcional)
+    
+    # 1. Tenta Local
     if inkExists(id):
-        return loadDocument(id).body.content
+        try:
+            let doc = loadDocument(id)
+            return doc.body.content
+        except:
+            discard
 
-    # Fonte da verdade
-    let cloudData = fetchFromRemote(idStr)
-    if cloudData != "":
-        var doc = newDotWw(id)
-        overwrite(doc, cloudData)
-        saveDocument(doc)
-        return cloudData
-
-    ""
+    # 2. Tenta Remoto (JSONBin)
+    echo " [LOG] Não encontrado localmente. Tentando nuvem para: ", idStr
+    let remoteContent = fetchFromRemote(idStr)
+    if remoteContent.len > 0:
+        return remoteContent
+        
+    return ""
