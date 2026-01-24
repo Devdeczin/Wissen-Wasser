@@ -1,11 +1,33 @@
 /* css/inkindle.css */
-* { box-sizing: border-box; }
+* { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
     margin: 0; padding: 0;
-    background-color: #fff;
-    color: #000;
-    font-family: serif; /* usa a Bookerly nativa do Kindle */
+    background-color: #fff !important; /* Kindle sempre branco */
+    color: #000 !important;
+    font-family: serif; 
 }
+
+#editor {
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    padding: 20px;
+    outline: none;
+    font-size: 18px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    /* Resolve o erro de compatibilidade e melhora performance */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-rendering: optimizeSpeed;
+}
+
+/* Esconde elementos inúteis no Kindle */
+.desktop-only { display: none !important; }
 
 #toolbar {
     height: 60px;

@@ -13,6 +13,7 @@ async function initEditor() {
         setupKindleEditor(inkId);
     } else {
         await setupA4Editor(inkId);
+        setupMarkdownShortcuts(); // Mova a lógica de Markdown para uma função separada que só roda no Desktop
     }
     setupGlobalShortcuts();
 }
@@ -114,11 +115,15 @@ function distributeContent(content) {
 }
 
 function setupKindleEditor(inkId) {
+    // Força o CSS do Kindle
+    const themeLink = document.getElementById('theme-style');
+    if (themeLink) themeLink.href = 'css/inkindle.css';
+
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');
-    editor.id = 'editor';
-    editor.className = 'kindle-page';
+    editor.id = 'editor'; // ID que o inkindle.css usa
     editor.contentEditable = 'true';
+    editor.spellcheck = false; // Desativar spellcheck ajuda no lag do Kindle
     
     fetchInkContent(inkId).then(content => {
         editor.innerText = content || localStorage.getItem('cache_' + inkId) || '';
