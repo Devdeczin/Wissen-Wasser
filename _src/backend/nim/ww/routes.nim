@@ -19,6 +19,11 @@ routes:
     get "/ink.html":
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "ink.html")
+    
+    get "/ink/findpublic/":
+        {.cast(gcsafe).}:
+            let publicInks = fetchPublicInks()
+            resp Http200, $publicInks, "application/json"
 
     get "/list-inks":
         {.cast(gcsafe).}:
@@ -47,10 +52,10 @@ routes:
             resp Http200, content, "application/json"
         
     post "/ink/@id":
-        var b = request.body
-        var i = @"id"
-        resp Http200, l_update_ink(i, b), "application/json"
-        
+            let b = request.body
+            let i = @"id"
+            resp l_update_ink(i, b)
+
     post "/ink/@id/overwrite":
         resp Http200, l_overwrite_ink(@"id", request.body), "application/json"
 

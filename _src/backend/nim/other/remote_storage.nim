@@ -82,6 +82,25 @@ proc fetchFromRemote*(inkId: string): string =
         c.close()
     return ""
 
+proc fetchPublicInks*(): JsonNode =
+    result = newJArray()
+    let index = fetchIndex()
+    if not index.hasKey("inkIndex"): return
+
+    let c = newClient()
+    try:
+        for inkId, binId in index["inkIndex"].pairs:
+            let url = "https://api.jsonbin.io/v3/b/" & binId.getStr() & "/latest"
+            let r = c.get(url)
+            if r.status.startsWith("2"):
+                let data = parseJson(r.body)["record"]
+                if data.hasKey("visibleForAll") and data["visibleForAll"].getBool():
+                    result.add(%*{"id": inkId, "preview": data["content"].getStr().substr(0, 60) & "..."})
+    except:
+        echo " [ERRO] Falha ao varrer inks públicos."
+    finally:
+        c.close()
+
 proc syncToRemote*(doc: WwDocument) =
     let inkId = $doc.header.inkid
     
@@ -91,10 +110,11 @@ proc syncToRemote*(doc: WwDocument) =
     c.headers["X-Bin-Public"] = "false"
 
     let body = %*{
-        "inkid": inkId,
-        "content": doc.body.content,
-        "updatedAt": $doc.header.updatedAt
-    }
+            "inkid": inkId,
+            "content": doc.body.content,
+            "updatedAt": $doc.header.updatedAt,
+            "visibleForAll": doc.header.visibleForAll
+        }
 
     var index = fetchIndex()
     if not index.hasKey("inkIndex"):

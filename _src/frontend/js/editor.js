@@ -1,141 +1,131 @@
 // wissen-wasser/_src/frontend/js/editor.js
 const editorContainer = document.getElementById('editor-container');
-const isKindle = /kindle|silk|mobile/i.test(navigator.userAgent);
+const urlParams = new URLSearchParams(window.location.search);
+
+// Detecção: Apenas Kindle/Silk real ou se forçado via URL (?mode=kindle)
+const isKindle = /kindle|silk/i.test(navigator.userAgent) || urlParams.get('mode') === 'kindle';
 
 async function initEditor() {
-    const urlParams = new URLSearchParams(window.location.search);
     const inkId = urlParams.get('id') || 'temp-ink';
     
-    const display = document.getElementById('ink-id-display');
-    if (display) display.innerText = `ID: ${inkId}`;
+    if (document.getElementById('ink-id-display')) {
+        document.getElementById('ink-id-display').innerText = `ID: ${inkId}`;
+    }
 
     if (isKindle) {
         setupKindleEditor(inkId);
     } else {
         await setupA4Editor(inkId);
-        setupMarkdownShortcuts(); // Mova a lógica de Markdown para uma função separada que só roda no Desktop
     }
+
     setupGlobalShortcuts();
+    setupAutoSave(inkId);
 }
 
+// --- MODO KINDLE ---
+function setupKindleEditor(inkId) {
+    const themeLink = document.getElementById('theme-style');
+    if (themeLink) themeLink.href = 'css/inkindle.css';
+
+    editorContainer.innerHTML = '';
+    const editor = document.createElement('div');
+    editor.id = 'editor';
+    editor.contentEditable = 'true';
+    editor.spellcheck = false; // Essencial para reduzir lag no Kindle
+    
+    fetchInkContent(inkId).then(content => {
+        editor.innerText = content || "";
+    });
+
+    editorContainer.appendChild(editor);
+}
+
+// --- MODO DESKTOP (A4) ---
 async function setupA4Editor(inkId) {
     editorContainer.innerHTML = '';
     const firstPage = createPage();
     editorContainer.appendChild(firstPage);
 
-    // Carregamento inicial
     const content = await fetchInkContent(inkId);
-    if (content) firstPage.innerText = content;
+    firstPage.innerText = content || "";
 
-    // EVENTO DE TECLADO PARA MARKDOWN (Dispara no Espaço)
-    editorContainer.addEventListener('keyup', (e) => {
+    editorContainer.addEventListener('input', (e) => {
         const activePage = e.target;
         if (!activePage.classList.contains('page')) return;
 
-        if (e.key === ' ') {
-            const text = activePage.innerText;
-            // Markdown Notion-like
-            if (text.startsWith('# ')) {
-                activePage.innerText = text.substring(2);
-                document.execCommand('formatBlock', false, 'h1');
-            } else if (text.startsWith('## ')) {
-                activePage.innerText = text.substring(3);
-                document.execCommand('formatBlock', false, 'h2');
-            } else if (text.startsWith('- ')) {
-                activePage.innerText = text.substring(2);
-                document.execCommand('insertUnorderedList');
-            }
+        // MD dinâmico ao digitar espaço
+        if (e.data === ' ') {
+            handleMarkdown(activePage);
         }
-    });
 
-    // EVENTO DE INPUT PARA QUEBRA DE PÁGINA
-    editorContainer.addEventListener('input', (e) => {
-        const activePage = e.target;
-        
-        // Se o conteúdo transbordar a altura fixa de 297mm
+        // Quebra de página A4
         if (activePage.scrollHeight > activePage.offsetHeight) {
-            // Pega o último nó (provavelmente o que causou o estouro)
-            const lastNode = activePage.lastChild;
             const newPage = createPage();
             editorContainer.appendChild(newPage);
-            
-            if (lastNode) {
-                newPage.appendChild(lastNode); // Move o excesso para a nova página
-            }
-            
+            if (activePage.lastChild) newPage.appendChild(activePage.lastChild);
             newPage.focus();
         }
     });
-
-    const cloudData = await fetchInkContent(inkId); 
-    
-    try {
-        // Tenta parsear como JSON caso o backend envie um objeto
-        const data = JSON.parse(cloudData);
-        // Se for um dicionário { "content": "..." }, extrai o texto
-        firstPage.innerText = data.content || ""; 
-    } catch (e) {
-        // Se não for JSON (texto puro), usa direto
-        firstPage.innerText = cloudData;
-    }
 }
 
 function createPage() {
     const div = document.createElement('div');
     div.className = 'page';
     div.contentEditable = 'true';
-    div.spellcheck = true; // Ativa explicitamente
-    div.setAttribute('lang', 'pt-BR'); // Define o dicionário para o Zen/Mozilla
     return div;
 }
 
+// --- PARSER MARKDOWN ESTÁVEL ---
 function handleMarkdown(element) {
-    const text = element.innerHTML;
-    // Detecta padrão e transforma imediatamente
-    if (text.includes('#&nbsp;')) {
-        document.execCommand('formatBlock', false, 'h1');
-        element.innerHTML = text.replace('#&nbsp;', '');
-    } else if (text.includes('##&nbsp;')) {
-        document.execCommand('formatBlock', false, 'h2');
-        element.innerHTML = text.replace('##&nbsp;', '');
-    } else if (text.includes('-&nbsp;')) {
-        document.execCommand('insertUnorderedList');
-        element.innerHTML = text.replace('-&nbsp;', '');
-    }
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    const textNode = range.startContainer;
+    const content = textNode.textContent;
+
+    // Regex para identificar padrões no início do nó de texto
+    const patterns = [
+        { reg: /^#\s/, tag: 'h1' },
+        { reg: /^##\s/, tag: 'h2' },
+        { reg: /^-\s/, tag: 'insertUnorderedList' }
+    ];
+
+    patterns.forEach(p => {
+        if (p.reg.test(content)) {
+            if (p.tag.startsWith('insert')) {
+                document.execCommand(p.tag, false, null);
+            } else {
+                document.execCommand('formatBlock', false, p.tag);
+            }
+            // Remove o símbolo do MD após converter
+            textNode.textContent = content.replace(p.reg, '');
+        }
+    });
+}
+
+// --- SALVAMENTO E ATALHOS ---
+function setupAutoSave(inkId) {
+    setInterval(() => {
+        console.log("Auto-save: Sincronizando...");
+        manualSave();
+    }, 60000); // 1 minuto
 }
 
 function getAllPagesContent() {
-    return Array.from(document.querySelectorAll('.page')).map(p => p.innerText).join('\n');
+    // Tenta pegar do editor único (Kindle)
+    const kindleEditor = document.getElementById('editor');
+    if (kindleEditor) return kindleEditor.innerText;
+
+    // Tenta pegar das páginas (A4)
+    const pages = document.querySelectorAll('.page');
+    if (pages.length > 0) {
+        return Array.from(pages).map(p => p.innerText).join('\n');
+    }
+
+    return ""; // Fallback
 }
 
-// Função para lidar com textos longos carregados da nuvem
-function distributeContent(content) {
-    // Se o texto carregado for muito longo, esta lógica simples ajuda, 
-    // mas o evento de input fará o resto conforme você edita.
-}
-
-function setupKindleEditor(inkId) {
-    // Força o CSS do Kindle
-    const themeLink = document.getElementById('theme-style');
-    if (themeLink) themeLink.href = 'css/inkindle.css';
-
-    editorContainer.innerHTML = '';
-    const editor = document.createElement('div');
-    editor.id = 'editor'; // ID que o inkindle.css usa
-    editor.contentEditable = 'true';
-    editor.spellcheck = false; // Desativar spellcheck ajuda no lag do Kindle
-    
-    fetchInkContent(inkId).then(content => {
-        editor.innerText = content || localStorage.getItem('cache_' + inkId) || '';
-    });
-
-    editor.addEventListener('input', () => {
-        localStorage.setItem('cache_' + inkId, editor.innerText);
-    });
-    editorContainer.appendChild(editor);
-}
-
-// Re-vincular atalhos e temas
 function setupGlobalShortcuts() {
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -143,13 +133,6 @@ function setupGlobalShortcuts() {
             manualSave();
         }
     });
-}
-
-function setTheme(themeName) {
-    if (isKindle) return;
-    const themeLink = document.getElementById('theme-style');
-    if (themeLink) themeLink.href = `css/${themeName}.css`;
-    localStorage.setItem('ww-theme', themeName);
 }
 
 window.onload = initEditor;

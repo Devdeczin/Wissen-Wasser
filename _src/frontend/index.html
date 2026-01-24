@@ -2,61 +2,150 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wissen-Wasser Dashboard</title>
     <link rel="stylesheet" href="css/desktop.css">
     <style>
+        /* Layout Base Desktop */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            max-width: 1200px;
+            margin: 40px auto;
+            gap: 30px;
+            padding: 0 20px;
+        }
         .ink-card {
             background: var(--toolbar);
             padding: 20px;
             border: 1px solid var(--border);
             border-radius: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
+            margin-bottom: 12px;
             cursor: pointer;
             transition: 0.2s;
         }
-        .ink-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        #ink-list { width: 100%; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .ink-card:hover { border-color: var(--accent); }
+        
+        #public-section {
+            background: rgba(255,255,255,0.03);
+            border-left: 2px solid var(--border);
+            padding-left: 20px;
+        }
+        .public-item {
+            font-size: 13px;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        /* MODO INKINDLE (SECO) - Aplicado via JS */
+        body.kindle-mode { 
+            background: #fff !important; 
+            color: #000 !important; 
+            font-family: serif !important; 
+        }
+        body.kindle-mode .dashboard-layout { 
+            grid-template-columns: 1fr; /* Remove a coluna lateral no Kindle */
+            max-width: 800px;
+        }
+        body.kindle-mode .ink-card { 
+            border: 2px solid #000 !important; 
+            background: #fff !important; 
+            color: #000 !important; 
+            box-shadow: none !important; 
+        }
+        body.kindle-mode #toolbar { 
+            border-bottom: 2px solid #000 !important; 
+            background: #fff !important; 
+            color: #000 !important; 
+        }
+        body.kindle-mode .desktop-only { 
+            display: none !important; 
+        }
     </style>
 </head>
 <body>
     <div id="toolbar">
         <strong>WISSEN-WASSER</strong>
         <div style="display: flex; gap: 10px; margin-left: auto;">
-            <input type="text" id="manual-id" placeholder="Digite um InkID..." 
-                style="background:#21262d; border:1px solid var(--border); color:white; border-radius:4px; padding:0 10px; outline: none;">
-            <button onclick="const id = document.getElementById('manual-id').value; if(id) location.href='ink.html?id=' + id" 
-                    style="background: var(--border);">ACESSAR</button>
+            <input type="text" id="manual-id" placeholder="Inkid: 0000-ABCD">
+            <button onclick="location.href='ink.html?id=' + document.getElementById('manual-id').value">ACESSAR</button>
+            
             <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
         </div>
     </div>
 
-    <div id="ink-list">
-        <p style="text-align: center; color: var(--text-muted);">Carregando fluxos de pensamento...</p>
+    <div class="dashboard-layout">
+        <div id="my-inks">
+            <h2 id="section-title" style="font-size: 18px; margin-bottom: 20px;">Meus Inks (Nuvem)</h2>
+            <div id="ink-list">Carregando...</div>
+        </div>
+        
+        <div id="public-section" class="desktop-only">
+            <h2 style="font-size: 16px; margin-bottom: 20px; color: var(--accent);">Fluxos Públicos</h2>
+            <div id="public-list">Buscando...</div>
+        </div>
     </div>
 
     <script>
-        async function loadInks() {
+        // Detecção rigorosa de Kindle/Silk
+        const isKindle = /kindle|silk/i.test(navigator.userAgent);
+        
+        if (isKindle) {
+            document.body.classList.add('kindle-mode');
+        }
+
+        async function loadDashboard() {
+            const inkListContainer = document.getElementById('ink-list');
+
+            if (isKindle) {
+                // LÓGICA PARA KINDLE: Apenas local
+                document.getElementById('section-title').innerText = "Inks no Dispositivo (Cache)";
+                
+                const cachedKeys = Object.keys(localStorage).filter(k => k.startsWith('cache_'));
+                
+                if (cachedKeys.length === 0) {
+                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum rascunho local encontrado.</p>';
+                } else {
+                    inkListContainer.innerHTML = cachedKeys.map(key => {
+                        const id = key.replace('cache_', '');
+                        return `
+                            <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                                <strong>${id}</strong> <small>(Offline)</small>
+                            </div>`;
+                    }).join('');
+                }
+                // Mata a execução aqui para o Kindle não gastar bateria com fetch
+                return;
+            }
+
+            // LÓGICA PARA DESKTOP: Carregamento completo (Nuvem + Público)
             try {
+                // Carrega Inks do usuário (Nuvem)
                 const res = await fetch('/list-inks');
                 const inks = await res.json();
-                const list = document.getElementById('ink-list');
-                if (inks.length === 0) {
-                    list.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Nenhum Ink encontrado.</p>';
-                    return;
-                }
-                list.innerHTML = inks.map(id => `
+                inkListContainer.innerHTML = inks.map(id => `
                     <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
-                        <span style="font-family: monospace; font-weight: bold;">${id}</span>
-                        <small style="color:var(--text-muted)">abrir documento →</small>
+                        <strong>${id}</strong>
+                    </div>
+                `).join('');
+
+                // Carrega Feed Público
+                const resPublic = await fetch('/ink/findpublic/');
+                const publics = await resPublic.json();
+                document.getElementById('public-list').innerHTML = publics.map(ink => `
+                    <div class="public-item" onclick="location.href='ink.html?id=${ink.id}'">
+                        <div style="font-weight: bold;">${ink.id}</div>
+                        <div style="opacity: 0.6; font-size: 11px;">${ink.preview}</div>
                     </div>
                 `).join('');
             } catch (e) {
-                document.getElementById('ink-list').innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar lista.</p>';
+                inkListContainer.innerText = "Erro ao sincronizar com a nuvem.";
+                console.error("Falha no carregamento desktop:", e);
             }
         }
-        window.onload = loadInks;
+
+        window.onload = loadDashboard;
     </script>
 </body>
 </html>

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Editor - Wissen-Wasser</title>
-    <select id="theme-selector" onchange="setTheme(this.value)" class="desktop-only">
+    <link id="theme-style" rel="stylesheet" href="css/desktop.css">
 </head>
 <body>
     <div id="toolbar">
-        <button id="save-btn" onclick="manualSave()">Salvar (Ctrl+S)</button>
+        <button id="save-btn" onclick="manualSave()">Salvar</button>
         
         <select id="theme-selector" onchange="setTheme(this.value)" class="desktop-only">
             <option value="desktop">Estilo JSONBin</option>
@@ -20,53 +20,24 @@
         </select>
 
         <label class="file-label desktop-only">
-            + Fonte .ttf
+            + .ttf
             <input type="file" id="font-upload" accept=".ttf" onchange="handleFontImport(event)" style="display:none">
         </label>
 
         <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
-            <span id="ink-id-display" style="font-family: monospace; font-size: 12px; opacity: 0.6;">ID: temp-ink</span>
-            <span id="status">Pronto</span>
+            <span id="ink-id-display" style="font-family: monospace; font-size: 11px; opacity: 0.7;">ID: temp-ink</span>
+            <span id="status" style="font-size: 11px; font-weight: bold;">Pronto</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px; border-right: 1px solid var(--border); padding-right: 15px;">
+            <input type="checkbox" id="public-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+            <label for="public-toggle" style="font-size: 12px; color: var(--text-muted); cursor: pointer;">Público</label>
         </div>
     </div>
 
-    <div id="editor-container">
-        </div>
+    <div id="editor-container"></div>
     
     <script src="js/core.js"></script>
     <script src="js/editor.js"></script>
-    <script>
-        async function manualSave() {
-            const status = document.getElementById('status');
-            status.innerText = "Sincronizando...";
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const inkId = urlParams.get('id') || 'temp-ink';
-            
-            // Coleta texto de TODAS as páginas (A4) ou do editor único (Kindle)
-            const pages = document.querySelectorAll('.page');
-            let content = "";
-            
-            if (pages.length > 0) {
-                content = Array.from(pages).map(p => p.innerText).join('\n');
-            } else {
-                const singleEditor = document.getElementById('editor');
-                content = singleEditor ? singleEditor.innerText : "";
-            }
-            
-            try {
-                const result = await apiSaveInk(inkId, content);
-                if (result) {
-                    status.innerText = "Salvo na nuvem!";
-                    // Se o ID mudou (era temp-ink), atualiza o display
-                    document.getElementById('ink-id-display').innerText = `ID: ${result}`;
-                } else {
-                    status.innerText = "Erro (salvo local)";
-                }
-            } catch (e) {
-                status.innerText = "Offline (cache)";
-            }
-        }
-    </script>
 </body>
 </html>

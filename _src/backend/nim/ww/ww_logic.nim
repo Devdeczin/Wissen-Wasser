@@ -21,21 +21,18 @@ proc l_create_ink*(body: string): string =
         "version": doc.header.version
     })
 
-proc l_update_ink*(idStr: string, body: string): string =
-    let id = toInkId(idStr)
-    if not inkExists(id):
-        return toJsonString(%*{"error": "404: Ink not found"})
+proc l_update_ink*(id: string, body: string): JsonNode =
+    let j = parseJson(body)
+    var doc = loadDocument(id.toInkId())
     
-    var doc = loadDocument(id)
-    applyMutation(doc, body)
-
+    doc.body.content = j["content"].getStr()
+    if j.hasKey("visibleForAll"):
+        doc.header.visibleForAll = j["visibleForAll"].getBool()
+    
+    doc.header.updatedAt = nowTs()
     saveDocument(doc)
     syncToRemote(doc)
-    return toJsonString(%*{
-        "inkid": $id,
-        "version": doc.header.version,
-        "updatedAt": int64(doc.header.updatedAt)
-    })
+    return %*{"status": "ok"}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =
     let id = toInkId(idStr)

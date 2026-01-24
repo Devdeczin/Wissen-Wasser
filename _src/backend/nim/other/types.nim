@@ -27,6 +27,7 @@ type
         updatedAt*: Timestamp
         state*: WwDocState
         version*: int
+        visibleForAll*: bool
 
     WwBody* = object
         content*: string
@@ -59,5 +60,6 @@ proc toJson*(doc: WwDocument): JsonNode =
         "updatedAt": int64(doc.header.updatedAt),
         "state": $doc.header.state,
         "version": doc.header.version,
+        "visibleForAll": doc.header.visibleForAll,
         "content": doc.body.content
     }
