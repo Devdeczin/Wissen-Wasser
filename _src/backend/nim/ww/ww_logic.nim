@@ -26,6 +26,7 @@ proc l_update_ink*(id: string, body: string): JsonNode =
     var doc = loadDocument(id.toInkId())
     
     doc.body.content = j["content"].getStr()
+    
     if j.hasKey("visibleForAll"):
         doc.header.visibleForAll = j["visibleForAll"].getBool()
     

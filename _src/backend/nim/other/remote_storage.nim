@@ -110,11 +110,11 @@ proc syncToRemote*(doc: WwDocument) =
     c.headers["X-Bin-Public"] = "false"
 
     let body = %*{
-            "inkid": inkId,
-            "content": doc.body.content,
-            "updatedAt": $doc.header.updatedAt,
-            "visibleForAll": doc.header.visibleForAll
-        }
+        "inkid": inkId,
+        "content": doc.body.content,
+        "updatedAt": $doc.header.updatedAt,
+        "visibleForAll": doc.header.visibleForAll
+    }
 
     var index = fetchIndex()
     if not index.hasKey("inkIndex"):

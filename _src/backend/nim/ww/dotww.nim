@@ -81,6 +81,8 @@ proc parseWw*(raw: string): WwDocument =
                 hdr.state = parseEnum[WwDocState](parts[1])
             of "version":
                 hdr.version = parseInt(parts[1])
+            of "visible":
+                hdr.visibleForAll = parseBool(parts[1]) #
             else:
                 discard
         else:
