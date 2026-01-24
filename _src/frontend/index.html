@@ -97,40 +97,45 @@
 
         async function loadDashboard() {
             const inkListContainer = document.getElementById('ink-list');
+            
+            // Pega todos os IDs que existem no localStorage (cache do navegador)
+            const cachedIds = Object.keys(localStorage)
+                .filter(k => k.startsWith('cache_'))
+                .map(k => k.replace('cache_', ''));
 
             if (isKindle) {
-                // LÓGICA PARA KINDLE: Apenas local
                 document.getElementById('section-title').innerText = "Inks no Dispositivo (Cache)";
-                
-                const cachedKeys = Object.keys(localStorage).filter(k => k.startsWith('cache_'));
-                
-                if (cachedKeys.length === 0) {
+                if (cachedIds.length === 0) {
                     inkListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum rascunho local encontrado.</p>';
                 } else {
-                    inkListContainer.innerHTML = cachedKeys.map(key => {
-                        const id = key.replace('cache_', '');
-                        return `
-                            <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
-                                <strong>${id}</strong> <small>(Offline)</small>
-                            </div>`;
-                    }).join('');
+                    inkListContainer.innerHTML = cachedIds.map(id => `
+                        <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                            <strong>${id}</strong> <small>(Offline)</small>
+                        </div>`).join('');
                 }
-                // Mata a execução aqui para o Kindle não gastar bateria com fetch
                 return;
             }
 
-            // LÓGICA PARA DESKTOP: Carregamento completo (Nuvem + Público)
             try {
-                // Carrega Inks do usuário (Nuvem)
+                // Busca a lista total do servidor
                 const res = await fetch('/list-inks');
-                const inks = await res.json();
-                inkListContainer.innerHTML = inks.map(id => `
-                    <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
-                        <strong>${id}</strong>
-                    </div>
-                `).join('');
+                const serverInks = await res.json();
 
-                // Carrega Feed Público
+                // FILTRO DE PERSISTÊNCIA: 
+                // Só mostra o Ink se o ID retornado pelo servidor estiver no cachedIds do navegador
+                const myInks = serverInks.filter(id => cachedIds.includes(id));
+
+                if (myInks.length === 0) {
+                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Sua lista está vazia.</p>';
+                } else {
+                    inkListContainer.innerHTML = myInks.map(id => `
+                        <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                            <strong>${id}</strong>
+                        </div>
+                    `).join('');
+                }
+
+                // Carrega Feed Público (independente do cache local)
                 const resPublic = await fetch('/ink/findpublic/');
                 const publics = await resPublic.json();
                 document.getElementById('public-list').innerHTML = publics.map(ink => `
@@ -140,12 +145,10 @@
                     </div>
                 `).join('');
             } catch (e) {
-                inkListContainer.innerText = "Erro ao sincronizar com a nuvem.";
+                inkListContainer.innerText = "Erro ao sincronizar.";
                 console.error("Falha no carregamento desktop:", e);
             }
         }
-
-        window.onload = loadDashboard;
     </script>
 </body>
 </html>
