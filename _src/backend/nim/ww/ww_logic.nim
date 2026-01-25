@@ -21,12 +21,17 @@ proc l_create_ink*(body: string): string =
         "version": doc.header.version
     })
 
-proc l_update_ink*(id: string, body: string): JsonNode =
-    if id == "temp-ink": 
-        return %*{"status": "ignored", "reason": "temp-ink cannot be synced (burro)"}
-    var doc = loadDocument(id.toInkId())
+proc l_update_ink*(idStr: string, body: string): JsonNode =
+    let id = idStr.toInkId()
     let j = parseJson(body)
     
+    var doc: WwDocument
+    if not inkExists(id):
+        doc = newDotWw(id)
+        echo " [LOG] Criando novo documento via Update: ", idStr
+    else:
+        doc = loadDocument(id)
+
     doc.body.content = j["content"].getStr()
     if j.hasKey("visibleForAll"):
         doc.header.visibleForAll = j["visibleForAll"].getBool()
@@ -34,6 +39,7 @@ proc l_update_ink*(id: string, body: string): JsonNode =
     doc.header.updatedAt = nowTs()
     saveDocument(doc)
     syncToRemote(doc)
+    
     return %*{"status": "ok"}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =

@@ -120,6 +120,15 @@ routes:
         let body = request.body
         let responseNode = l_update_ink(id, body)
         resp Http200, $responseNode, "application/json"
+    
+    post "/ink/@id/sync":
+        let id = @"id"
+        if id == "temp-ink":
+            resp Http400, "ID inválido", "text/plain"
+        
+        let body = request.body
+        let responseNode = l_update_ink(id, body)
+        resp Http200, $responseNode, "application/json"
 
     get "/api/ink/@id":
         let id = @"id"
