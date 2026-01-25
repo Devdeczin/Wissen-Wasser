@@ -2,6 +2,8 @@
 import httpclient, json, strutils, os
 import ../other/[types, config]
 
+setupConfig()
+
 proc newClient(): HttpClient =
     var apiKey: string
     {.cast(gcsafe).}:
@@ -67,7 +69,7 @@ proc syncToRemote*(doc: WwDocument) =
 
     let c = newClient()
     c.headers["X-Bin-Name"] = inkId
-    c.headers["X-Master-Key"] = config
+    c.headers["X-Master-Key"] = conf.jsonBinKey
     
     let body = %*{
         "inkid": inkId,
