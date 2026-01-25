@@ -18,7 +18,8 @@ RUN nimble install -y jester
 # Erro Comum 3: Resolução de caminhos (Path)
 # Compilamos a partir da raiz para que o Nim entenda a hierarquia dos arquivos.
 # O parâmetro -p garante que ele encontre a pasta 'other' mesmo com caminhos relativos.
-RUN nim c -d:ssl -d:release --threads:off \
+RUN nimble install -y jester && \
+    nim c -d:ssl --verbosity:2 --hints:on \
     --path:_src/backend/nim/other \
     --path:_src/backend/nim/ww \
     --out:server \
