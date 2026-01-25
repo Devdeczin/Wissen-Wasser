@@ -146,4 +146,3 @@ settings:
         post "/ink/@id/archive":
             {.cast(gcsafe).}:
                 resp Http200, l_archive_ink(@"id"), "application/json"
-{.pop.}
