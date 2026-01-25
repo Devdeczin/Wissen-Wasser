@@ -1,30 +1,25 @@
 // wissen-wasser/_src/frontend/js/core.js
 async function fetchInkContent(id) {
-    // 1. Curto-circuito para o Manual de Instruções
-    if (id === '0000-0000') {
-        return `# Wissen-Wasser: Manual de Uso
-Bem-vindo ao seu editor minimalista focado em escrita pura.
+    // 1. IDs especiais buscam arquivos .md estáticos
+    const specialIds = {
+        '0000-0000': '/static/docs/manual.md',
+        'TERM-USER': '/static/docs/terms.md'
+    };
 
-## Atalhos e Markdown:
-- # Título: Digite # e Espaço para criar um título.
-- ## Subtítulo: Digite ## e Espaço.
-- Lista: Digite - e Espaço para listas.
-
-## Dicas:
-- Configurações: Clique 5 vezes ou segure a logo WISSEN-WASSER no topo.
-- Modo Kindle: O site detecta automaticamente e ajusta o contraste e fontes.
-- Sincronização: Seus Inks são salvos no cache do navegador e na nuvem.
-- Erro de cache: Caso um ink apagado ainda apareça, acesse https://wissen-wasser.onrender.com/limpa para limpar o cache do site
-
-RELATE ERROS AQUI: https://github.com/Devdeczin/Wissen-Wasser/issues
-
-Este manual é apenas leitura e reside apenas no seu dispositivo.`;
+    if (specialIds[id]) {
+        try {
+            const response = await fetch(specialIds[id]);
+            if (response.ok) return await response.text();
+        } catch (err) {
+            return "# Erro ao carregar documento oficial.";
+        }
     }
+
+    // 2. Fluxo normal para Inks do usuário
     const localCache = localStorage.getItem('cache_' + id);
 
     try {
         const response = await fetch(`/api/ink/${id}`);
-        
         if (response.ok) {
             const data = await response.json(); 
             const content = data.content || "";
@@ -32,7 +27,7 @@ Este manual é apenas leitura e reside apenas no seu dispositivo.`;
             return content;
         }
     } catch (err) {
-        console.warn("Offline ou erro de rede. Usando cache local.");
+        console.warn("Usando cache local.");
     }
 
     return localCache || "";
