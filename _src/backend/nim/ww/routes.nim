@@ -41,6 +41,21 @@ routes:
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "index.html")
 
+    get "/limpa":
+        resp """
+        <!DOCTYPE html>
+        <html>
+        <body style="background:black;color:white;font-family:monospace;">
+            <h1>LIMPANDO CACHE...</h1>
+            <script>
+            localStorage.clear();
+            alert('Cache limpo! Voltando para o dashboard...');
+            window.location.href = '/';
+            </script>
+        </body>
+        </html>
+        """, "text/html"
+
     get "/ink":
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "ink.html")
