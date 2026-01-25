@@ -13,5 +13,6 @@ Bem-vindo ao seu editor minimalista focado em escrita pura.
 - Erro de cache: Caso um ink apagado ainda apareça, acesse https://wissen-wasser.onrender.com/limpa para limpar o cache do site
 
 RELATE ERROS AQUI: https://github.com/Devdeczin/Wissen-Wasser/issues
+POR FAVOR, LEIA OS TERMOS DE USUÁRIO. COLOQUE O INKID TERM-USER E ACESSE PARA VER OS TERMOS DE USUÁRIO
 
 Este manual é apenas leitura e reside apenas no seu dispositivo.

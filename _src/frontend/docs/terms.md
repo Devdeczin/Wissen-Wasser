@@ -11,16 +11,16 @@ O Wissen-Wasser é uma ferramenta de escrita minimalista fornecida "como está" 
 
 ## 2. Limitação de Responsabilidade
 O desenvolvedor e o projeto Wissen-Wasser **NÃO SE RESPONSABILIZAM** por:
-* O uso que o usuário faz da ferramenta.
-* A natureza, legalidade ou moralidade do conteúdo escrito e armazenado.
-* Danos diretos ou indiretos causados por perda de dados, invasões de terceiros ou falhas no sistema.
-* **Backup:** O usuário é o único responsável por manter cópias externas de seus textos importantes.
+- O uso que o usuário faz da ferramenta.
+- A natureza, legalidade ou moralidade do conteúdo escrito e armazenado.
+- Danos diretos ou indiretos causados por perda de dados, invasões de terceiros ou falhas no sistema.
+- **Backup:** O usuário é o único responsável por manter cópias externas de seus textos importantes.
 
 ## 3. Colaboração Legal e Crimes
 Diferente de serviços de armazenamento anônimo absoluto, o Wissen-Wasser não é um "porto seguro" para atividades ilícitas:
-* **Testemunho e Evidências:** Caso o desenvolvedor seja formalmente notificado por autoridades judiciais competentes ou intimações policiais sobre crimes (incluindo, mas não se limitando a: ameaças, pedofilia, crimes de ódio ou planejamento de atividades ilícitas), o projeto **irá colaborar plenamente**.
-* **Dados Fornecidos:** Embora o sistema não exija login, registros de conexão (logs do servidor Render, endereços IP e IDs de Bins) poderão ser fornecidos às autoridades se requisitados legalmente.
-* **Criptografia:** No futuro plano "7 Chaves" (Wasser Pro/Água Profissional), o conteúdo será criptografado. No entanto, metadados de acesso ainda poderão estar sujeitos a requisição legal.
+- **Testemunho e Evidências:** Caso o desenvolvedor seja formalmente notificado por autoridades judiciais competentes ou intimações policiais sobre crimes (incluindo, mas não se limitando a: ameaças, pedofilia, crimes de ódio ou planejamento de atividades ilícitas), o projeto **irá colaborar plenamente**.
+- **Dados Fornecidos:** Embora o sistema não exija login, registros de conexão (logs do servidor Render, endereços IP e IDs de Bins) poderão ser fornecidos às autoridades se requisitados legalmente.
+- **Criptografia:** No futuro plano "7 Chaves" (Wasser Pro/Água Profissional), o conteúdo será criptografado. No entanto, metadados de acesso ainda poderão estar sujeitos a requisição legal.
 
 ## 4. Privacidade e Manutenção
 * Na versão gratuita (Wissen Free/Conhecimento Grátis), os dados são armazenados de forma não criptografada.
