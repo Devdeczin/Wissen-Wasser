@@ -66,6 +66,8 @@ proc syncToRemote*(doc: WwDocument) =
     if inkId == "temp-ink": return
 
     let c = newClient()
+    c.headers["X-Bin-Name"] = inkId
+    
     let body = %*{
         "inkid": inkId,
         "content": doc.body.content,
