@@ -20,27 +20,28 @@ routes:
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "ink.html")
     
-    get "/ink/findpublic/":
-        {.cast(gcsafe).}:
-            let publicInks = fetchPublicInks()
-            resp Http200, $publicInks, "application/json"
-
     get "/list-inks":
             {.cast(gcsafe).}:
                 var files: seq[string] = @[]
-                let path = getHomeDir() / ".wissen-wasser" / "ink"
-                
-                if dirExists(path):
-                    try:
+                try:
+                    let path = getHomeDir() / ".wissen-wasser" / "ink"
+                    if dirExists(path):
                         for kind, file in walkDir(path):
                             if kind == pcDir:
                                 files.add(extractFilename(file))
-                    except:
-                        echo " [ERRO] Falha ao ler diretório de inks"
-                
-                # Sempre retorna um array JSON, mesmo que @[]
+                except:
+                    echo " [ERRO] Falha ao listar inks. Retornando vazio."
+                    
                 resp Http200, $(%files), "application/json"
 
+    get "/ink/findpublic/":
+        {.cast(gcsafe).}:
+            try:
+                let publicInks = fetchPublicInks()
+                resp Http200, $publicInks, "application/json"
+            except:
+                echo " [ERRO] Falha ao buscar públicos."
+                resp Http200, "[]", "application/json"
     # --- API ---
     get "/ping":
         resp Http200, l_ping(), "application/json"

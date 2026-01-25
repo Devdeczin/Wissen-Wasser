@@ -87,56 +87,72 @@
         </div>
     </div>
 
-    <script>
-        // Detecção rigorosa de Kindle/Silk
+<script>
         const isKindle = /kindle|silk/i.test(navigator.userAgent);
-        
-        if (isKindle) {
-            document.body.classList.add('kindle-mode');
-        }
-        
+        if (isKindle) document.body.classList.add('kindle-mode');
+
         async function loadDashboard() {
             const inkListContainer = document.getElementById('ink-list');
             const publicListContainer = document.getElementById('public-list');
 
-            // Identifica o que o usuário REALMENTE tem no navegador
+            // 1. Pega o que REALMENTE existe no seu navegador
             const cachedIds = Object.keys(localStorage)
                 .filter(k => k.startsWith('cache_'))
                 .map(k => k.replace('cache_', ''));
 
-            try {
-                // Se for Kindle, ignora o fetch e usa só o cache para poupar bateria
-                if (isKindle) {
-                    renderLocalOnly(cachedIds, inkListContainer);
-                    return;
+            if (isKindle || cachedIds.length === 0) {
+                if (cachedIds.length === 0) {
+                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum rascunho local.</p>';
+                } else {
+                    inkListContainer.innerHTML = cachedIds.map(id => 
+                        `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${id}</strong> <small>(Cache)</small></div>`
+                    ).join('');
                 }
+                if(isKindle) return; // Kindle para aqui
+            }
 
-                // Busca lista do servidor
+            try {
                 const res = await fetch('/list-inks');
-                if (!res.ok) throw new Error("Falha no servidor");
+                if (!res.ok) throw new Error("Erro servidor");
+                
                 const serverInks = await res.json();
 
-                // FILTRO DE PERSISTÊNCIA: Só mostra se o ID estiver no localStorage
-                const myValidInks = serverInks.filter(id => cachedIds.includes(id));
+                const validInks = serverInks.filter(id => cachedIds.includes(id));
 
-                inkListContainer.innerHTML = myValidInks.length > 0 
-                    ? myValidInks.map(id => `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${id}</strong></div>`).join('')
-                    : '<p style="opacity: 0.5;">Nenhum Ink no cache local.</p>';
-
-                // Busca fluxos públicos
-                const resPublic = await fetch('/ink/findpublic/');
-                const publics = resPublic.ok ? await resPublic.json() : [];
-                
-                publicListContainer.innerHTML = publics.length > 0
-                    ? publics.map(ink => `<div class="public-item" onclick="location.href='ink.html?id=${ink.id}'"><strong>${ink.id}</strong><div style="font-size:11px;opacity:0.6">${ink.preview || ''}</div></div>`).join('')
-                    : '<p style="opacity: 0.5;">Nenhum fluxo público.</p>';
-
+                if (validInks.length === 0) {
+                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Lista vazia (Cache limpo).</p>';
+                } else {
+                    inkListContainer.innerHTML = validInks.map(id => `
+                        <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
+                            <strong>${id}</strong>
+                        </div>
+                    `).join('');
+                }
             } catch (e) {
-                console.error("Erro no Dashboard:", e);
-                inkListContainer.innerHTML = "Erro ao carregar lista.";
-                publicListContainer.innerHTML = "Erro ao buscar públicos.";
+                console.error(e);
+                // Se der erro, mostra o que tem no cache local como fallback
+                inkListContainer.innerHTML = cachedIds.map(id => 
+                        `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${id}</strong> <small>(Offline)</small></div>`
+                    ).join('');
+            }
+
+            // Carrega Públicos Separadamente (Para não travar a lista principal)
+            try {
+                const resPub = await fetch('/ink/findpublic/');
+                const publics = await resPub.json();
+                
+                publicListContainer.innerHTML = publics.length ? publics.map(ink => `
+                    <div class="public-item" onclick="location.href='ink.html?id=${ink.id}'">
+                        <div style="font-weight: bold;">${ink.id}</div>
+                        <div style="opacity: 0.6; font-size: 11px;">${ink.preview || 'Sem preview'}</div>
+                    </div>
+                `).join('') : '<p style="opacity: 0.5;">Nenhum fluxo público.</p>';
+            } catch (e) {
+                publicListContainer.innerHTML = '<p style="opacity: 0.5;">Indisponível.</p>';
             }
         }
+
+        window.onload = loadDashboard;
     </script>
 </body>
 </html>
