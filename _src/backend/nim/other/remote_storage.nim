@@ -61,28 +61,42 @@ proc resolveBinId*(inkId: string): string =
         return index["inkIndex"][inkId].getStr()
     ""
 
-proc fetchFromRemote*(inkId: string): string =
-    let binId = resolveBinId(inkId)
-    if binId.len == 0: 
-        echo " [DEBUG] InkID não mapeado no índice: ", inkId
-        return ""
-
+proc syncToRemote*(doc: WwDocument) =
+    let inkId = $doc.header.inkid
     let c = newClient()
+    
+    # Reforce os headers específicos desta requisição
+    c.headers["Content-Type"] = "application/json"
+    c.headers["X-Bin-Name"] = inkId
+
+    let body = %*{
+        "inkid": inkId,
+        "content": doc.body.content,
+        "updatedAt": $doc.header.updatedAt,
+        "visibleForAll": doc.header.visibleForAll
+    }
+
+    var index = fetchIndex()
     try:
-        let url = "https://api.jsonbin.io/v3/b/" & binId & "/latest"
-        let r = c.get(url)
-        if r.status.startsWith("2"):
-            let data = parseJson(r.body)
-            # Priorizamos o campo 'content' para o Editor.js não se perder
-            if data["record"].hasKey("content"):
-                return data["record"]["content"].getStr()
-            else:
-                return $data["record"]
+        var response: Response
+        if index.hasKey("inkIndex") and index["inkIndex"].hasKey(inkId):
+            let bId = index["inkIndex"][inkId].getStr()
+            response = c.put("https://api.jsonbin.io/v3/b/" & bId, $body)
+        else:
+            response = c.post("https://api.jsonbin.io/v3/b", $body)
+        
+        if response.status.startsWith("2"):
+            if not index.hasKey("inkIndex") or not index["inkIndex"].hasKey(inkId):
+                let respData = parseJson(response.body)
+                let newBinId = respData["metadata"]["id"].getStr()
+                if not index.hasKey("inkIndex"): index["inkIndex"] = %*{}
+                
+                index["inkIndex"][inkId] = %newBinId
+                saveIndex(index)
     except:
-        echo " [ERRO] Falha ao ler bin remoto: ", binId
+        echo " [ERRO] Falha na sincronização remota."
     finally:
         c.close()
-    return ""
 
 proc fetchPublicInks*(): JsonNode =
     result = newJArray()
@@ -103,43 +117,27 @@ proc fetchPublicInks*(): JsonNode =
     finally:
         c.close()
 
-proc syncToRemote*(doc: WwDocument) =
-    let inkId = $doc.header.inkid
-    
+proc fetchFromRemote*(inkId: string): string =
+    # 1. Descobre qual o Bin ID associado a esse Ink ID
+    let binId = resolveBinId(inkId)
+    if binId.len == 0: 
+        echo " [DEBUG] InkID não mapeado no índice: ", inkId
+        return ""
+
     let c = newClient()
-    # No Nim 1.6.X, usamos []= para modificar headers existentes
-    c.headers["X-Bin-Name"] = inkId
-    c.headers["X-Bin-Public"] = "false"
-
-    let body = %*{
-        "inkid": inkId,
-        "content": doc.body.content,
-        "updatedAt": $doc.header.updatedAt,
-        "visibleForAll": doc.header.visibleForAll
-    }
-
-    var index = fetchIndex()
-    if not index.hasKey("inkIndex"):
-        index["inkIndex"] = %*{}
-
     try:
-        var response: Response
-        if index["inkIndex"].hasKey(inkId):
-            let bId = index["inkIndex"][inkId].getStr()
-            response = c.put("https://api.jsonbin.io/v3/b/" & bId, $body)
-        else:
-            response = c.post("https://api.jsonbin.io/v3/b", $body)
-        
-        if response.status.startsWith("2"):
-            if not index["inkIndex"].hasKey(inkId):
-                let respData = parseJson(response.body)
-                let newBinId = respData["metadata"]["id"].getStr()
-                index["inkIndex"][inkId] = %newBinId
-                saveIndex(index)
-            echo "Sincronizado: ", inkId
-        else:
-            echo " [ERRO] Servidor remoto retornou: ", response.status
+        let url = "https://api.jsonbin.io/v3/b/" & binId & "/latest"
+        let r = c.get(url)
+        if r.status.startsWith("2"):
+            let data = parseJson(r.body)
+            # O JSONBin retorna os dados dentro de "record"
+            let record = data["record"]
+            if record.hasKey("content"):
+                return record["content"].getStr()
+            else:
+                return $record # Fallback
     except:
-        echo "Falha na sincronização."
+        echo " [ERRO] Falha ao ler bin remoto: ", binId
     finally:
         c.close()
+    return ""

@@ -17,60 +17,54 @@ Bem-vindo ao seu editor minimalista focado em escrita pura.
 
 Este manual é apenas leitura e reside apenas no seu dispositivo.`;
     }
-
-    if (!id || id === 'temp-ink') return "";
-
-    if (localStorage.getItem('ww_offline_mode') === 'true') {
-        return localStorage.getItem('cache_' + id) || "Arquivo não disponível offline.";
-    }
+    const localCache = localStorage.getItem('cache_' + id);
 
     try {
-        const response = await fetch(`/ink/${id}`);
+        const response = await fetch(`/api/ink/${id}`);
+        
         if (response.ok) {
-            const data = await response.text();
-            localStorage.setItem('cache_' + id, data);
-            try {
-                const json = JSON.parse(data);
-                return json.record ? json.record.content : (json.content || data);
-            } catch (e) { return data; }
+            const data = await response.json(); 
+            const content = data.content || "";
+            localStorage.setItem('cache_' + id, content);
+            return content;
         }
-    } catch (err) { console.warn("Usando cache."); }
-    return localStorage.getItem('cache_' + id) || "";
+    } catch (err) {
+        console.warn("Offline ou erro de rede. Usando cache local.");
+    }
+
+    return localCache || "";
 }
 
 async function apiSaveInk(id, payload) {
-    // Se for o manual, fingimos que salvou com sucesso para o UI não bugar
-    if (id === '0000-0000') {
-        console.log("Manual de instruções: salvamento ignorado.");
-        return id; 
-    }
+    if (id === '0000-0000' || localStorage.getItem('ww_offline_mode') === 'true') return id;
 
-    // Bloqueio do Modo Offline (Aproveitando para adicionar aqui)
-    if (localStorage.getItem('ww_offline_mode') === 'true') {
-        console.log("Modo offline ativo: salvo apenas no cache.");
-        return id;
-    }
-
-    const url = (id === 'temp-ink' || !id) ? '/ink' : `/ink/${id}`;
+    const isNew = (id === 'temp-ink' || !id);
+    const url = isNew ? '/ink' : `/ink/${id}`;
     
     try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: payload
-            });
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json' 
+            },
+            body: payload
+        });
 
-            if (response.ok) {
-                const data = await response.json();
-                if ((id === 'temp-ink' || !id) && data.inkid) {
-                    const newUrl = `ink.html?id=${data.inkid}`;
-                    window.history.pushState({ path: newUrl }, '', newUrl);
-                }
-                return data.inkid || id;
+        if (response.ok) {
+            const data = await response.json();
+            if ((id === 'temp-ink' || !id) && data.inkid) {
+                const newUrl = `?id=${data.inkid}`;
+                window.history.pushState({}, '', newUrl);
+                return data.inkid;
             }
-        } catch (err) { console.error(err); }
-        return false;
+            return id;
+        }
+    } catch (err) { 
+        console.error("Erro na API:", err); 
     }
+    return false;
+}
 
 async function manualSave() {
     const status = document.getElementById('status');

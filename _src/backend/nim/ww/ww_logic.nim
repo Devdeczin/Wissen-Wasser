@@ -22,11 +22,12 @@ proc l_create_ink*(body: string): string =
     })
 
 proc l_update_ink*(id: string, body: string): JsonNode =
-    let j = parseJson(body)
+    if id == "temp-ink": 
+        return %*{"status": "ignored", "reason": "temp-ink cannot be synced (burro)"}
     var doc = loadDocument(id.toInkId())
+    let j = parseJson(body)
     
     doc.body.content = j["content"].getStr()
-    
     if j.hasKey("visibleForAll"):
         doc.header.visibleForAll = j["visibleForAll"].getBool()
     

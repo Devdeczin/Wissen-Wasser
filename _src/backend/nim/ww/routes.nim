@@ -59,6 +59,11 @@ routes:
     get "/ink":
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "ink.html")
+    
+    post "/ink/@id/sync":
+        let id = @"id"
+        let body = request.body
+        resp l_update_ink(id, body)
         
     get "/easteregg/@page": # gemini, você é genial
         let page = @"page"
@@ -70,18 +75,18 @@ routes:
             resp Http404, "Este easter egg ainda não foi chocado."
 
     get "/list-inks":
-            {.cast(gcsafe).}:
-                var files: seq[string] = @[]
-                try:
-                    let path = getHomeDir() / ".wissen-wasser" / "ink"
-                    if dirExists(path):
-                        for kind, file in walkDir(path):
-                            if kind == pcDir:
-                                files.add(extractFilename(file))
-                except:
-                    echo " [ERRO] Falha ao listar inks. Retornando vazio."
-                    
-                resp Http200, $(%files), "application/json"
+        {.cast(gcsafe).}:
+            var files: seq[string] = @[]
+            try:
+                let path = getHomeDir() / ".wissen-wasser" / "ink"
+                if dirExists(path):
+                    for kind, file in walkDir(path):
+                        if kind == pcDir:
+                            files.add(extractFilename(file))
+            except:
+                echo " [ERRO] Falha ao listar inks. Retornando vazio."
+                
+            resp Http200, $(%files), "application/json"
 
     get "/ink/findpublic/":
         {.cast(gcsafe).}:
@@ -108,41 +113,25 @@ routes:
             resp Http200, content, "application/json"
         
     post "/ink/@id":
-            let b = request.body
-            let i = @"id"
-            resp l_update_ink(i, b)
+        let id = @"id"
+        if id == "temp-ink":
+            resp Http400, $(%*{"status": "error", "message": "ID temporário não permitido (burro)"}), "application/json"
+        
+        let body = request.body
+        let responseNode = l_update_ink(id, body)
+        resp Http200, $responseNode, "application/json"
+
+    get "/api/ink/@id":
+        let id = @"id"
+        let content = l_get_ink_content(id)
+        if content == "":
+            resp Http404, $(%*{"error": "not found"}), "application/json"
+        else:
+            resp Http200, $(%*{"content": content}), "application/json"
 
     post "/ink/@id/overwrite":
         resp Http200, l_overwrite_ink(@"id", request.body), "application/json"
 
     post "/ink/@id/archive":
-        # Corrigida a indentação aqui
         {.cast(gcsafe).}:
             resp Http200, l_archive_ink(@"id"), "application/json"
-
-    # --- DEV ROUTES ---
-    post "/dev/list-local-cache":
-        if not DEV_ENABLED: halt(Http403, "Disabled")
-        let path = getHomeDir() / ".wissen-wasser" / "ink"
-        var files: seq[string] = @[]
-        if dirExists(path):
-            for kind, f in walkDir(path):
-                if kind == pcDir: files.add(extractFilename(f))
-        resp %files
-
-    post "/dev/ink/delete":
-        if not DEV_ENABLED: halt(Http403, "Disabled")
-        let body = parseJson(request.body)
-        let ids = body["ids"].getElems().mapIt(it.getStr())
-        deleteInksByString(ids)
-        resp %*{"status": "ok", "deleted": ids.len}
-
-    post "/dev/ink/delete-by-prefix":
-        if not DEV_ENABLED: halt(Http403, "Disabled")
-        let body = parseJson(request.body)
-        let prefix = body["prefix"].getStr()
-        let deleted = deleteInksByPrefix(prefix)
-        resp %*{"status": "ok", "prefix": prefix, "deleted": deleted}
-
-    error Http404:
-        resp "Wissen-Wasser: Rota não encontrada ou recurso inexistente."

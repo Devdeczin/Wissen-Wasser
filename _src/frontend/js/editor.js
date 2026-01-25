@@ -128,10 +128,16 @@ function handleMarkdown(element) {
 
 // --- SALVAMENTO E ATALHOS ---
 function setupAutoSave(inkId) {
+    if (inkId === '0000-0000') return;
+
+    // No Kindle, aumentamos o intervalo ou desativamos o autosave agressivo
+    const interval = isKindle ? 180000 : 60000; // 3 minutos no Kindle, 1 no PC
+
     setInterval(() => {
-        console.log("Auto-save: Sincronizando...");
-        manualSave();
-    }, 60000); // 1 minuto
+        if (document.activeElement.id !== 'editor') {
+            manualSave();
+        }
+    }, interval);
 }
 
 function getAllPagesContent() {
