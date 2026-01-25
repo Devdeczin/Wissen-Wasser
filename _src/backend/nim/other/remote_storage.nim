@@ -69,7 +69,7 @@ proc syncToRemote*(doc: WwDocument) =
 
     let c = newClient()
     c.headers["X-Bin-Name"] = inkId
-    c.headers["X-Master-Key"] = conf.jsonBinKey
+    c.headers["X-Master-Key"] = conf.jsonbinApiKey
     
     let body = %*{
         "inkid": inkId,
