@@ -1,4 +1,4 @@
-# wissen-wasser/_src/backend/ww/logic.nim
+# wissen-wasser/_src/backend/ww/ww_logic.nim
 import json, strutils, times
 import storage, dotww, inkid
 import ../other/[types, remote_storage]
@@ -23,23 +23,28 @@ proc l_create_ink*(body: string): string =
 
 proc l_update_ink*(idStr: string, body: string): JsonNode =
     let id = idStr.toInkId()
-    let j = parseJson(body)
+    var j: JsonNode
     
+    try:
+        j = parseJson(body)
+    except:
+        echo " [AVISO] Body não é JSON válido, tratando como texto."
+        j = %*{"content": body}
+
     var doc: WwDocument
     if not inkExists(id):
         doc = newDotWw(id)
-        echo " [LOG] Criando novo documento via Update: ", idStr
     else:
         doc = loadDocument(id)
 
-    doc.body.content = j["content"].getStr()
-    if j.hasKey("visibleForAll"):
-        doc.header.visibleForAll = j["visibleForAll"].getBool()
-    
+    if j.hasKey("content"):
+        doc.body.content = j["content"].getStr()
+    else:
+        doc.body.content = body # Fallback final
+
     doc.header.updatedAt = nowTs()
     saveDocument(doc)
     syncToRemote(doc)
-    
     return %*{"status": "ok"}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =

@@ -63,12 +63,9 @@ proc resolveBinId*(inkId: string): string =
 
 proc syncToRemote*(doc: WwDocument) =
     let inkId = $doc.header.inkid
-    let c = newClient()
-    
-    # Reforce os headers específicos desta requisição
-    c.headers["Content-Type"] = "application/json"
-    c.headers["X-Bin-Name"] = inkId
+    if inkId == "temp-ink": return
 
+    let c = newClient()
     let body = %*{
         "inkid": inkId,
         "content": doc.body.content,
@@ -81,20 +78,25 @@ proc syncToRemote*(doc: WwDocument) =
         var response: Response
         if index.hasKey("inkIndex") and index["inkIndex"].hasKey(inkId):
             let bId = index["inkIndex"][inkId].getStr()
+            echo " [DEBUG] Atualizando Bin existente: ", bId
             response = c.put("https://api.jsonbin.io/v3/b/" & bId, $body)
         else:
+            echo " [DEBUG] Criando NOVO Bin para: ", inkId
             response = c.post("https://api.jsonbin.io/v3/b", $body)
         
         if response.status.startsWith("2"):
+            let respData = parseJson(response.body)
             if not index.hasKey("inkIndex") or not index["inkIndex"].hasKey(inkId):
-                let respData = parseJson(response.body)
                 let newBinId = respData["metadata"]["id"].getStr()
                 if not index.hasKey("inkIndex"): index["inkIndex"] = %*{}
-                
                 index["inkIndex"][inkId] = %newBinId
                 saveIndex(index)
+                echo " [OK] Novo Bin vinculado ao índice."
+            echo " [OK] Conteúdo sincronizado com sucesso."
+        else:
+            echo " [ERRO] JSONBin recusou os dados: ", response.status, " - ", response.body
     except:
-        echo " [ERRO] Falha na sincronização remota."
+        echo " [CRÍTICO] Falha na conexão com JSONBin."
     finally:
         c.close()
 

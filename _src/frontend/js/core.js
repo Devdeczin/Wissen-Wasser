@@ -14,6 +14,9 @@ Bem-vindo ao seu editor minimalista focado em escrita pura.
 - Configurações: Clique 5 vezes ou segure a logo WISSEN-WASSER no topo.
 - Modo Kindle: O site detecta automaticamente e ajusta o contraste e fontes.
 - Sincronização: Seus Inks são salvos no cache do navegador e na nuvem.
+- Erro de cache: Caso um ink apagado ainda apareça, acesse https://wissen-wasser.onrender.com/limpa para limpar o cache do site
+
+RELATE ERROS AQUI: https://github.com/Devdeczin/Wissen-Wasser/issues
 
 Este manual é apenas leitura e reside apenas no seu dispositivo.`;
     }
