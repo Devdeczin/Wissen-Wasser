@@ -2,7 +2,8 @@
 import httpclient, json, strutils, os
 import ../other/[types, config]
 
-setupConfig()
+{.cast(gcsafe).}:
+    setupConfig()
 
 proc newClient(): HttpClient =
     var apiKey: string

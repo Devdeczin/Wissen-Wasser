@@ -9,7 +9,8 @@ settings:
     port = conf.port.Port
     bindAddr = "0.0.0.0"
     staticDir = "frontend"
-    
+
+{.push gcsafe: on.}
 routes:
     # --- FRONTEND ---
 
@@ -144,3 +145,4 @@ routes:
     post "/ink/@id/archive":
         {.cast(gcsafe).}:
             resp Http200, l_archive_ink(@"id"), "application/json"
+{.pop.}

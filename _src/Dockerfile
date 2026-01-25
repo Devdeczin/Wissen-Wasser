@@ -19,7 +19,7 @@ RUN nimble install -y jester
 # Compilamos a partir da raiz para que o Nim entenda a hierarquia dos arquivos.
 # O parâmetro -p garante que ele encontre a pasta 'other' mesmo com caminhos relativos.
 RUN nimble install -y jester && \
-    nim c -d:ssl --mm:orc --verbosity:2 --hints:on \
+    nim c -d:ssl -d:release --mm:orc --threads:on \
     --path:_src/backend/nim/other \
     --path:_src/backend/nim/ww \
     --out:server \
