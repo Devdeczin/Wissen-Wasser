@@ -69,7 +69,11 @@ proc syncToRemote*(doc: WwDocument) =
 
     let c = newClient()
     c.headers["X-Bin-Name"] = inkId
-    c.headers["X-Master-Key"] = conf.jsonbinApiKey
+    
+    var apiKey: string
+    {.cast(gcsafe).}:
+        apiKey = conf.jsonbinApiKey
+    c.headers["X-Master-Key"] = apiKey
     
     let body = %*{
         "inkid": inkId,
