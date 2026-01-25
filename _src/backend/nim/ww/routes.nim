@@ -11,7 +11,7 @@ settings:
     bindAddr = "0.0.0.0"
     staticDir = "frontend"
 
-{.push gcsafe: on.}
+{.push gcsafe: on.}:
     routes:
         # --- FRONTEND ---
 
