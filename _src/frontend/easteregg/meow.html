@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wissen-Wasser // Meow</title>
+    <style>
+        :root { --bg: #0a0a0a; --fg: #00ff41; --border: #333; }
+        body { 
+            background: var(--bg); color: #eee; 
+            font-family: monospace; display: flex; 
+            flex-direction: column; align-items: center; 
+            justify-content: center; min-height: 100vh; margin: 0; padding: 20px;
+        }
+        header {
+            margin-bottom: 20px;
+            color: var(--fg);
+        }
+        pre {
+            font-size: 10px;
+            line-height: 1.2;
+            margin: 0;
+            white-space: pre;
+        }
+        .cat-card { 
+            border: 1px solid var(--border); padding: 20px; 
+            background: #111; text-align: center; max-width: 500px;
+            width: 100%;
+        }
+        #cat-img { 
+            max-width: 100%; max-height: 50vh; 
+            border: 1px solid var(--fg); margin-bottom: 15px;
+            display: none;
+        }
+        .loader { color: var(--fg); margin: 20px; }
+        button { 
+            background: transparent; color: var(--fg); 
+            border: 1px solid var(--fg); padding: 10px 20px; 
+            cursor: pointer; font-family: monospace;
+            text-transform: uppercase;
+        }
+        button:hover { background: var(--fg); color: #000; }
+        
+        /* Kindle Mode */
+        body.kindle { background: #fff !important; color: #000 !important; }
+        body.kindle header, body.kindle pre { color: #000 !important; }
+        body.kindle .cat-card { border: 2px solid #000; background: #fff; }
+        body.kindle #cat-img { border: 2px solid #000; filter: grayscale(1); }
+        body.kindle button { border: 2px solid #000; color: #000; }
+    </style>
+</head>
+<body>
+
+    <header>
+<pre>
+       _                        
+       \`*-.                    
+        )  _`-.                 
+       .  : `. .                
+       : _   '  \               
+       ; *` _.   `*-._          
+       `-.-'          `-.       
+         ;       `       `.     
+         :.       .        \    
+         . \  .   :   .-'   .   
+         '  `+.;  ;  '      :   
+         :  '  |    ;       ;-. 
+         ; '   : :`-;   -. \ `_)
+         `*--'  `*--'  `*--'    
+</pre>
+    </header>
+
+    <div class="cat-card">
+        <div id="loader" class="loader">BUSCANDO GATO...</div>
+        <img id="cat-img" src="" alt="Gato aleatório">
+        <br>
+        <button onclick="fetchCat()">[ PRÓXIMO GATO ]</button>
+        <p><a href="/" style="color: #555; text-decoration: none; font-size: 11px;">&lt; VOLTAR_AO_DASHBOARD</a></p>
+    </div>
+
+    <script>
+        // Detecção de Kindle para alto contraste
+        if (/kindle|silk/i.test(navigator.userAgent)) {
+            document.body.className = 'kindle';
+        }
+
+        async function fetchCat() {
+            const img = document.getElementById('cat-img');
+            const loader = document.getElementById('loader');
+            
+            img.style.display = 'none';
+            loader.style.display = 'block';
+            loader.innerText = "BUSCANDO GATO...";
+
+            try {
+                // The Cat API - Simples e rápida
+                const res = await fetch('https://api.thecatapi.com/v1/images/search');
+                const data = await res.json();
+                
+                img.src = data[0].url;
+                img.onload = () => {
+                    loader.style.display = 'none';
+                    img.style.display = 'block';
+                };
+            } catch (e) {
+                loader.innerText = "ERRO: O GATO ROUBOU SEU WIFI!!!!1!";
+            }
+        }
+
+        // Inicia o primeiro gato
+        window.onload = fetchCat;
+    </script>
+</body>
+</html>

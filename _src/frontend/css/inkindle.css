@@ -1,67 +1,54 @@
-/* css/inkindle.css */
-* { 
-    box-sizing: border-box; 
-    -webkit-tap-highlight-color: transparent;
+/* inkindle.css - Foco em E-Ink (Alto Contraste) */
+:root {
+    --bg: #ffffff;
+    --fg: #000000;
+    --border: #000000;
 }
 
 body {
-    margin: 0; padding: 0;
-    background-color: #fff !important; /* Kindle sempre branco */
-    color: #000 !important;
-    font-family: serif; 
+    background-color: var(--bg) !important;
+    color: var(--fg) !important;
+    font-family: "Amazon Ember", "Serif", serif !important; /* Fontes padrão Kindle */
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
 }
-
-#editor {
-    width: 100%;
-    min-height: calc(100vh - 60px);
-    padding: 20px;
-    outline: none;
-    font-size: 18px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    /* Resolve o erro de compatibilidade e melhora performance */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    text-rendering: optimizeSpeed;
-}
-
-/* Esconde elementos inúteis no Kindle */
-.desktop-only { display: none !important; }
 
 #toolbar {
-    height: 60px;
-    border-bottom: 2px solid #000;
-    display: flex; align-items: center;
-    padding: 0 10px;
+    background: #fff !important;
+    border-bottom: 3px solid var(--border) !important;
+    color: #000 !important;
+    height: auto !important;
+    padding: 10px !important;
 }
 
-#save-btn {
-    height: 45px;
-    padding: 0 20px;
-    background: #000;
-    color: #fff;
-    border: none;
-    font-size: 16px;
+#toolbar button {
+    border: 2px solid #000 !important;
+    background: #fff !important;
+    color: #000 !important;
     font-weight: bold;
+    padding: 8px 15px;
+    text-transform: uppercase;
 }
 
-#status {
-    margin-left: 15px;
-    font-size: 12px;
-}
-
+/* O Editor no Kindle */
 #editor {
-    width: 100%;
-    min-height: calc(100vh - 60px);
-    padding: 20px;
-    outline: none; /* remove a borda azul de foco */
-    font-size: 18px; /* tamanho confortável para leitura E-ink */
-    line-height: 1.6;
-    white-space: pre-wrap; /* mantém as quebras de linha */
+    padding: 20px !important;
+    font-size: 18px !important; /* Maior para leitura fácil */
+    min-height: 90vh;
+    outline: none;
 }
 
-.page:empty:before {
-    content: "Comece sua escrita buxa aqui...";
-    color: var(--text-muted);
+/* Markdown Básico no Kindle */
+h1, h2, h3 {
+    border-bottom: 1px solid #000;
+    padding-bottom: 5px;
 }
+
+/* Esconder firulas de desktop que o Kindle não processa bem */
+.desktop-only, #theme-selector, #font-upload {
+    display: none !important;
+}
+
+/* Ajuste de links */
+a { color: #000; text-decoration: underline; font-weight: bold; }

@@ -2,16 +2,33 @@
 const editorContainer = document.getElementById('editor-container');
 const urlParams = new URLSearchParams(window.location.search);
 
-// Detecção: Apenas Kindle/Silk real ou se forçado via URL (?mode=kindle)
+// Detecção: A  penas Kindle/Silk real ou se forçado via URL (?mode=kindle)
 const isKindle = /kindle|silk/i.test(navigator.userAgent) || urlParams.get('mode') === 'kindle';
 
 async function initEditor() {
+    // 1. Captura o ID da URL antes de qualquer coisa
+    const urlParams = new URLSearchParams(window.location.search);
     const inkId = urlParams.get('id') || 'temp-ink';
-    
-    if (document.getElementById('ink-id-display')) {
-        document.getElementById('ink-id-display').innerText = `ID: ${inkId}`;
+
+    console.log("Editor carregado com ID:", inkId);
+
+    // 2. Atualiza a interface visual IMEDIATAMENTE
+    const display = document.getElementById('ink-id-display');
+    if (display) {
+        display.innerText = (inkId === '0000-0000') ? "MODO: LEITURA" : `ID: ${inkId}`;
     }
 
+    // 3. Bloqueia salvamento e checkbox se for o manual
+    if (inkId === '0000-0000') {
+        const publicToggle = document.getElementById('public-toggle');
+        if (publicToggle) publicToggle.parentElement.style.display = 'none';
+        
+        // Desativa o botão salvar visualmente para o manual
+        const saveBtn = document.getElementById('save-btn');
+        if (saveBtn) saveBtn.style.opacity = "0.5";
+    }
+
+    // 4. Inicializa o editor específico (Kindle ou Desktop)
     if (isKindle) {
         setupKindleEditor(inkId);
     } else {
@@ -24,8 +41,13 @@ async function initEditor() {
 
 // --- MODO KINDLE ---
 function setupKindleEditor(inkId) {
+    document.body.classList.add('kindle-mode'); // Adiciona a classe que você criou no style
+    
     const themeLink = document.getElementById('theme-style');
     if (themeLink) themeLink.href = 'css/inkindle.css';
+
+    // Remove elementos que o Kindle não aguenta
+    document.querySelectorAll('.desktop-only').forEach(el => el.remove());
 
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');

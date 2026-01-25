@@ -1,56 +1,76 @@
 // wissen-wasser/_src/frontend/js/core.js
 async function fetchInkContent(id) {
+    // 1. Curto-circuito para o Manual de Instruções
+    if (id === '0000-0000') {
+        return `# Wissen-Wasser: Manual de Uso
+Bem-vindo ao seu editor minimalista focado em escrita pura.
+
+## Atalhos e Markdown:
+- # Título: Digite # e Espaço para criar um título.
+- ## Subtítulo: Digite ## e Espaço.
+- Lista: Digite - e Espaço para listas.
+
+## Dicas:
+- Configurações: Clique 5 vezes ou segure a logo WISSEN-WASSER no topo.
+- Modo Kindle: O site detecta automaticamente e ajusta o contraste e fontes.
+- Sincronização: Seus Inks são salvos no cache do navegador e na nuvem.
+
+Este manual é apenas leitura e reside apenas no seu dispositivo.`;
+    }
+
     if (!id || id === 'temp-ink') return "";
+
+    if (localStorage.getItem('ww_offline_mode') === 'true') {
+        return localStorage.getItem('cache_' + id) || "Arquivo não disponível offline.";
+    }
 
     try {
         const response = await fetch(`/ink/${id}`);
         if (response.ok) {
             const data = await response.text();
-            localStorage.setItem('cache_' + id, data); // Salva o bruto no cache
-            
+            localStorage.setItem('cache_' + id, data);
             try {
                 const json = JSON.parse(data);
-                // Prioriza o campo 'content' que contém o texto com Markdown
                 return json.record ? json.record.content : (json.content || data);
-            } catch (e) {
-                return data; // Se não for JSON, retorna o texto puro
-            }
+            } catch (e) { return data; }
         }
-    } catch (err) {
-        console.warn("Usando cache local.");
-    }
+    } catch (err) { console.warn("Usando cache."); }
     return localStorage.getItem('cache_' + id) || "";
 }
 
 async function apiSaveInk(id, payload) {
+    // Se for o manual, fingimos que salvou com sucesso para o UI não bugar
+    if (id === '0000-0000') {
+        console.log("Manual de instruções: salvamento ignorado.");
+        return id; 
+    }
+
+    // Bloqueio do Modo Offline (Aproveitando para adicionar aqui)
+    if (localStorage.getItem('ww_offline_mode') === 'true') {
+        console.log("Modo offline ativo: salvo apenas no cache.");
+        return id;
+    }
+
     const url = (id === 'temp-ink' || !id) ? '/ink' : `/ink/${id}`;
     
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'WissenWasserClient'
-            },
-            body: payload
-        });
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload
+            });
 
-        if (response.ok) {
-            const data = await response.json();
-            if (id === 'temp-ink' && data.inkid) {
-                const newUrl = `${window.location.pathname}?id=${data.inkid}`;
-                window.history.pushState({ path: newUrl }, '', newUrl);
-                const display = document.getElementById('ink-id-display');
-                if (display) display.innerText = `ID: ${data.inkid}`;
+            if (response.ok) {
+                const data = await response.json();
+                if ((id === 'temp-ink' || !id) && data.inkid) {
+                    const newUrl = `ink.html?id=${data.inkid}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                }
+                return data.inkid || id;
             }
-            return data.inkid || id;
-        }
-        return false;
-    } catch (err) {
-        console.error("Erro na comunicação:", err);
+        } catch (err) { console.error(err); }
         return false;
     }
-}
 
 async function manualSave() {
     const status = document.getElementById('status');

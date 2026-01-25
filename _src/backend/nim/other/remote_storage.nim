@@ -28,9 +28,11 @@ proc fetchIndex*(): JsonNode =
         let r = c.get(url)
         if r.status.startsWith("2"):
             let data = parseJson(r.body)
-            return data["record"]
+            let record = data["record"]
+            if not record.hasKey("inkIndex"):
+                return %*{"inkIndex": {}}
+            return record
         else:
-            echo " [LOG] Índice não encontrado ou vazio. Criando novo."
             return %*{"inkIndex": {}}
     except:
         return %*{"inkIndex": {}}

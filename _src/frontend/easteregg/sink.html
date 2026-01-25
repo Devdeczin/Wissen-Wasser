@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wissen-Wasser // SINK</title>
+    <style>
+        :root { --bg: #0a0a0a; --fg: #e0e0e0; --accent: #00ff41; --danger: #ff4444; }
+        body { background: var(--bg); color: var(--fg); font-family: monospace; padding: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        section { margin-bottom: 40px; padding: 15px; border: 1px solid #333; border-radius: 5px; }
+        button { background: #222; color: var(--fg); border: 1px solid #444; padding: 10px; cursor: pointer; margin: 5px 0; width: 100%; transition: 0.2s; }
+        button:hover { border-color: var(--accent); color: var(--accent); }
+        .danger-btn:hover { border-color: var(--danger); color: var(--danger); }
+        .switch-container { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .ink-item { display: flex; justify-content: space-between; font-size: 13px; padding: 5px; border-bottom: 1px solid #222; }
+        .ascii-cat { margin-top: 500px; text-align: center; font-size: 8px; cursor: pointer; opacity: 0.4; transition: 0.5s; }
+        .ascii-cat:hover { opacity: 1; color: var(--accent); }
+        a { color: var(--accent); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SINK / CONFIGS</h1>
+            <p><a href="/easteregg/daumreal">❤ APOIAR O PROJETO (me da um real)</a></p>
+        </header>
+
+        <section>
+            <h3>Modo de Operação</h3>
+            <div class="switch-container">
+                <span>Trabalhar Offline (Local)</span>
+                <input type="checkbox" id="mode-switch" onchange="toggleMode(this.checked)">
+            </div>
+            <p style="font-size: 11px; color: #888;">Se ativado, o site ignorará requisições à nuvem e usará apenas o cache do navegador.</p>
+        </section>
+
+        <section>
+            <h3>Gerenciar Inks Locais</h3>
+            <button onclick="toggleInstructions()">Ativar/Desativar Instruções (0000-0000)</button>
+            <button class="danger-btn" onclick="clearAllCache()">APAGAR TODO O CACHE</button>
+            
+            <div id="cache-list" style="margin-top: 20px;">
+                </div>
+        </section>
+
+        <div class="ascii-cat" onclick="location.href='/easteregg/meow'">
+<pre>
+      |\      _,,,---,,_
+ZZZzz /,`.-'`'    -.  ;-;;,_
+     |,4-  ) )-,_. ,\ (  `'-'
+    '---''(_/--'  `-'\_)
+    GARY (my cat)
+</pre>
+            <span>[ MEOW? ]</span>
+        </div>
+    </div>
+
+    <script>
+        // Carrega estado inicial
+        window.onload = () => {
+            document.getElementById('mode-switch').checked = localStorage.getItem('ww_offline_mode') === 'true';
+            renderCacheList();
+        };
+
+        function toggleMode(isOffline) {
+            localStorage.setItem('ww_offline_mode', isOffline);
+            alert(isOffline ? "Modo Offline Ativado." : "Sincronização Online Ativada.");
+        }
+
+        function toggleInstructions() {
+            const hasInst = localStorage.getItem('cache_0000-0000');
+            if (hasInst) {
+                localStorage.removeItem('cache_0000-0000');
+                alert("Instruções removidas do topo.");
+            } else {
+                localStorage.setItem('cache_0000-0000', 'true');
+                alert("Instruções ativadas. Procure por 0000-0000 no Dashboard.");
+            }
+            renderCacheList();
+        }
+
+        function renderCacheList() {
+            const container = document.getElementById('cache-list');
+            const cachedIds = Object.keys(localStorage)
+                .filter(k => k.startsWith('cache_'))
+                .map(k => k.replace('cache_', ''));
+
+            if (cachedIds.length === 0) {
+                container.innerHTML = "<em>Nenhum ink no cache.</em>";
+                return;
+            }
+
+            container.innerHTML = "<h4>Inks no Cache:</h4>" + cachedIds.map(id => `
+                <div class="ink-item">
+                    <span>${id}</span>
+                    <span style="color:var(--danger); cursor:pointer;" onclick="deleteSpecific('${id}')">[EXCLUIR]</span>
+                </div>
+            `).join('');
+        }
+
+        function deleteSpecific(id) {
+            if(confirm(`Excluir ${id} do cache?`)) {
+                localStorage.removeItem('cache_' + id);
+                renderCacheList();
+            }
+        }
+
+        function clearAllCache() {
+            if(confirm("ISSO APAGARÁ TUDO NO NAVEGADOR. Tem certeza?")) {
+                Object.keys(localStorage)
+                    .filter(k => k.startsWith('cache_'))
+                    .forEach(k => localStorage.removeItem(k));
+                renderCacheList();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -12,14 +12,48 @@ settings:
     
 routes:
     # --- FRONTEND ---
+
+    # se ele ficar lá em baixo, não funciona (por algum motivo)
+    get "/easteregg/daumreal":
+        let apiKey = getEnv("INVERTEXTO_API_KEY")
+        let pixKey = getEnv("PIX_DEVDECO_DINHEIRO")
+        
+        # Debug no terminal para conferir se as variáveis subiram
+        echo "[DEBUG] API:", apiKey
+        echo "[DEBUG] PIX:", pixKey
+
+        let qrCodeUrl = "https://api.invertexto.com/v1/qrcode?token=" & apiKey & "&text=" & pixKey
+
+        # Buscamos o arquivo (ajuste o caminho se necessário)
+        let path = "frontend/easteregg/daumreal.html"
+        
+        if fileExists(path):
+            var html = readFile(path)
+            html = html.replace("{{QR_CODE_URL}}", qrCodeUrl)
+            html = html.replace("{{PIX_KEY}}", pixKey)
+            
+            # O segredo: 'resp' com o conteúdo e o tipo explícito
+            resp html, "text/html"
+        else:
+            resp(Http404, "Template não encontrado")
+
     get "/":
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "index.html")
 
-    get "/ink.html":
+    get "/ink":
         {.cast(gcsafe).}:
             resp readFile(settings.staticDir / "ink.html")
-    
+        
+    get "/easteregg/@page": # gemini, você é genial
+        let page = @"page"
+        let filePath = settings.staticDir / "easteregg" / (page & ".html")
+        if fileExists(filePath):
+            {.cast(gcsafe).}:
+                resp readFile(filePath)
+        else:
+            resp Http404, "Este easter egg ainda não foi chocado."
+
     get "/list-inks":
             {.cast(gcsafe).}:
                 var files: seq[string] = @[]

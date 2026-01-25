@@ -6,7 +6,6 @@
     <title>Wissen-Wasser Dashboard</title>
     <link rel="stylesheet" href="css/desktop.css">
     <style>
-        /* Layout Base Desktop */
         .dashboard-layout {
             display: grid;
             grid-template-columns: 1fr 300px;
@@ -38,14 +37,14 @@
             cursor: pointer;
         }
 
-        /* MODO INKINDLE (SECO) - Aplicado via JS */
+        /* MODO INKINDLE (SECO) */
         body.kindle-mode { 
             background: #fff !important; 
             color: #000 !important; 
             font-family: serif !important; 
         }
         body.kindle-mode .dashboard-layout { 
-            grid-template-columns: 1fr; /* Remove a coluna lateral no Kindle */
+            grid-template-columns: 1fr; 
             max-width: 800px;
         }
         body.kindle-mode .ink-card { 
@@ -66,18 +65,17 @@
 </head>
 <body>
     <div id="toolbar">
-        <strong>WISSEN-WASSER</strong>
+        <strong style="cursor:pointer">WISSEN-WASSER</strong>
         <div style="display: flex; gap: 10px; margin-left: auto;">
             <input type="text" id="manual-id" placeholder="Inkid: 0000-ABCD">
             <button onclick="location.href='ink.html?id=' + document.getElementById('manual-id').value">ACESSAR</button>
-            
             <button onclick="location.href='ink.html'" id="save-btn">+ NOVO INK</button>
         </div>
     </div>
 
     <div class="dashboard-layout">
         <div id="my-inks">
-            <h2 id="section-title" style="font-size: 18px; margin-bottom: 20px;">Meus Inks (Nuvem)</h2>
+            <h2 id="section-title" style="font-size: 18px; margin-bottom: 20px;">Meus Inks</h2>
             <div id="ink-list">Carregando...</div>
         </div>
         
@@ -88,59 +86,59 @@
     </div>
 
 <script>
-        const isKindle = /kindle|silk/i.test(navigator.userAgent);
-        if (isKindle) document.body.classList.add('kindle-mode');
+    const isKindle = /kindle|silk/i.test(navigator.userAgent);
+    if (isKindle) document.body.classList.add('kindle-mode');
 
-        async function loadDashboard() {
-            const inkListContainer = document.getElementById('ink-list');
-            const publicListContainer = document.getElementById('public-list');
+    function renderInkList(ids) {
+        const container = document.getElementById('ink-list');
+        if (ids.length === 0) {
+            container.innerHTML = '<p style="opacity:0.6">Nenhum rascunho local.</p>';
+            return;
+        }
 
-            // 1. Pega o que REALMENTE existe no seu navegador
-            const cachedIds = Object.keys(localStorage)
-                .filter(k => k.startsWith('cache_'))
-                .map(k => k.replace('cache_', ''));
+        // 0000-0000 sempre no topo
+        ids.sort((a, b) => a === '0000-0000' ? -1 : 1);
 
-            if (isKindle || cachedIds.length === 0) {
-                if (cachedIds.length === 0) {
-                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Nenhum rascunho local.</p>';
-                } else {
-                    inkListContainer.innerHTML = cachedIds.map(id => 
-                        `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${id}</strong> <small>(Cache)</small></div>`
-                    ).join('');
-                }
-                if(isKindle) return; // Kindle para aqui
-            }
+        container.innerHTML = ids.map(id => {
+            const isManual = id === '0000-0000';
+            const label = isManual ? '📖 INSTRUÇÕES' : id;
+            const sub = isManual ? '' : ' <small>(Ink)</small>';
+            return `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${label}</strong>${sub}</div>`;
+        }).join('');
+    }
 
+    async function loadDashboard() {
+        const inkListContainer = document.getElementById('ink-list');
+        const publicListContainer = document.getElementById('public-list');
+        
+        // 1. Pega IDs do cache imediatamente
+        const cachedIds = Object.keys(localStorage)
+            .filter(k => k.startsWith('cache_'))
+            .map(k => k.replace('cache_', ''));
+
+        // Renderização instantânea (Fim do "piscar")
+        renderInkList(cachedIds);
+
+        // 2. Sincroniza com servidor (se não estiver offline)
+        if (localStorage.getItem('ww_offline_mode') !== 'true') {
             try {
                 const res = await fetch('/list-inks');
-                if (!res.ok) throw new Error("Erro servidor");
-                
-                const serverInks = await res.json();
-
-                const validInks = serverInks.filter(id => cachedIds.includes(id));
-
-                if (validInks.length === 0) {
-                    inkListContainer.innerHTML = '<p style="opacity: 0.6;">Lista vazia (Cache limpo).</p>';
-                } else {
-                    inkListContainer.innerHTML = validInks.map(id => `
-                        <div class="ink-card" onclick="location.href='ink.html?id=${id}'">
-                            <strong>${id}</strong>
-                        </div>
-                    `).join('');
+                if (res.ok) {
+                    const serverInks = await res.json();
+                    // Proteção: Mantém no Dashboard apenas o que o server validou OU o Manual
+                    const validIds = cachedIds.filter(id => serverInks.includes(id) || id === '0000-0000');
+                    renderInkList(validIds);
                 }
             } catch (e) {
-                console.error(e);
-                // Se der erro, mostra o que tem no cache local como fallback
-                inkListContainer.innerHTML = cachedIds.map(id => 
-                        `<div class="ink-card" onclick="location.href='ink.html?id=${id}'"><strong>${id}</strong> <small>(Offline)</small></div>`
-                    ).join('');
+                console.warn("Offline: Mantendo lista do cache.");
             }
+        }
 
-            // Carrega Públicos Separadamente (Para não travar a lista principal)
+        // 3. Públicos (Apenas Desktop)
+        if (!isKindle) {
             try {
                 const resPub = await fetch('/ink/findpublic/');
                 const publics = await resPub.json();
-                
                 publicListContainer.innerHTML = publics.length ? publics.map(ink => `
                     <div class="public-item" onclick="location.href='ink.html?id=${ink.id}'">
                         <div style="font-weight: bold;">${ink.id}</div>
@@ -151,8 +149,30 @@
                 publicListContainer.innerHTML = '<p style="opacity: 0.5;">Indisponível.</p>';
             }
         }
+    }
 
-        window.onload = loadDashboard;
-    </script>
+    // --- ATALHO SECRETO LOGO ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const logo = document.querySelector('#toolbar strong');
+        let clickCount = 0;
+        let pressTimer;
+
+        logo.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount >= 5) window.location.href = '/easteregg/sink';
+            setTimeout(() => { clickCount = 0; }, 2000);
+        });
+
+        const startPress = () => { pressTimer = setTimeout(() => { window.location.href = '/easteregg/sink'; }, 3000); };
+        const cancelPress = () => { clearTimeout(pressTimer); };
+
+        logo.addEventListener('mousedown', startPress);
+        logo.addEventListener('touchstart', startPress);
+        logo.addEventListener('mouseup', cancelPress);
+        logo.addEventListener('touchend', cancelPress);
+    });
+
+    window.onload = loadDashboard;
+</script>
 </body>
 </html>
