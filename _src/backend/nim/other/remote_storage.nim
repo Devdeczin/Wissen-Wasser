@@ -65,19 +65,19 @@ proc resolveBinId*(inkId: string): string =
     ""
 
 proc syncToRemote*(doc: WwDocument) =
-    let inkId = $doc.header.inkid
-    if inkId == "temp-ink": return
+    let idStr = $doc.header.inkid
+    if idStr == "temp-ink": return
 
-    let c = newClient()
-    c.headers["X-Bin-Name"] = inkId
-    
     var apiKey: string
     {.cast(gcsafe).}:
         apiKey = conf.jsonbinApiKey
+
+    let c = newClient()
+    c.headers["X-Bin-Name"] = idStr
     c.headers["X-Master-Key"] = apiKey
     
     let body = %*{
-        "inkid": inkId,
+        "inkid": idStr,
         "content": doc.body.content,
         "updatedAt": $doc.header.updatedAt,
         "visibleForAll": doc.header.visibleForAll
@@ -86,27 +86,22 @@ proc syncToRemote*(doc: WwDocument) =
     var index = fetchIndex()
     try:
         var response: Response
-        if index.hasKey("inkIndex") and index["inkIndex"].hasKey(inkId):
-            let bId = index["inkIndex"][inkId].getStr()
-            echo " [DEBUG] Atualizando Bin existente: ", bId
+        if index.hasKey("inkIndex") and index["inkIndex"].hasKey(idStr):
+            let bId = index["inkIndex"][idStr].getStr()
             response = c.put("https://api.jsonbin.io/v3/b/" & bId, $body)
         else:
-            echo " [DEBUG] Criando NOVO Bin para: ", inkId
             response = c.post("https://api.jsonbin.io/v3/b", $body)
         
         if response.status.startsWith("2"):
             let respData = parseJson(response.body)
-            if not index.hasKey("inkIndex") or not index["inkIndex"].hasKey(inkId):
+            if not index.hasKey("inkIndex") or not index["inkIndex"].hasKey(idStr):
                 let newBinId = respData["metadata"]["id"].getStr()
                 if not index.hasKey("inkIndex"): index["inkIndex"] = %*{}
-                index["inkIndex"][inkId] = %newBinId
+                index["inkIndex"][idStr] = %newBinId
                 saveIndex(index)
-                echo " [OK] Novo Bin vinculado ao índice."
-            echo " [OK] Conteúdo sincronizado com sucesso."
-        else:
-            echo " [ERRO] JSONBin recusou os dados: ", response.status, " - ", response.body
+            echo " [OK] Sincronizado: ", idStr
     except:
-        echo " [CRÍTICO] Falha na conexão com JSONBin."
+        echo " [ERRO] Falha crítica na sincronização remota."
     finally:
         c.close()
 
