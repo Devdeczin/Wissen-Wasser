@@ -1,6 +1,6 @@
 # wissen-wasser/_src/backend/ww/ww_logic.nim
 import json, strutils, times
-import storage, dotww, inkid, storage
+import storage, dotww, inkid, storage, threadpool
 import ../other/[types, remote_storage]
 
 proc toJsonString(n: JsonNode): string =
@@ -42,14 +42,13 @@ proc l_update_ink*(idStr: string, body: string): JsonNode =
         doc.header.updatedAt = nowTs()
         doc.header.visibleForAll = visible
         
+    try:
         saveDocument(doc)
-        try:
-            syncToRemote(doc)
-        except: echo " [ERRO] Sync falhou, mas local está OK."
-            
-        return %*{"status": "ok", "inkid": idStr}
-    except Exception as e:
-        return %*{"status": "error", "msg": e.msg}
+        
+        spawn syncToRemote(doc)         
+        return %*{"status": "ok", "inkid": idStr} 
+    except:
+        return %*{"status": "error"}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =
     let id = toInkId(idStr)
