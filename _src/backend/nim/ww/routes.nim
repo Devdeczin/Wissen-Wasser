@@ -3,26 +3,29 @@ import jester, json, strutils, os, sequtils
 import inkid, ww_logic, storage
 import ../other/[config, types, remote_storage]
 
+# Configuração de inicialização
 {.cast(gcsafe).}:
     setupConfig()
 
+# Configurações do Jester (Globais por padrão da lib)
 settings:
     port = conf.port.Port
     bindAddr = "0.0.0.0"
     staticDir = "frontend"
 
-let localSettings = settings
-
 routes:
     # --- FRONTEND ---
     get "/":
-        resp readFile(localSettings.staticDir / "index.html")
+        # Usamos o cast diretamente aqui para acessar o staticDir global com segurança
+        let sDir = {.cast(gcsafe).}: settings.staticDir
+        resp readFile(sDir / "index.html")
 
     get "/easteregg/daumreal":
+        let sDir = {.cast(gcsafe).}: settings.staticDir
         let apiKey = getEnv("INVERTEXTO_API_KEY")
         let pixKey = getEnv("PIX_DEVDECO_DINHEIRO")
         let qrCodeUrl = "https://api.invertexto.com/v1/qrcode?token=" & apiKey & "&text=" & pixKey
-        let path = localSettings.staticDir / "easteregg" / "daumreal.html"
+        let path = sDir / "easteregg" / "daumreal.html"
         
         if fileExists(path):
             var html = readFile(path)
@@ -40,10 +43,12 @@ routes:
         """, "text/html"
 
     get "/ink":
-        resp readFile(localSettings.staticDir / "ink.html")
+        let sDir = {.cast(gcsafe).}: settings.staticDir
+        resp readFile(sDir / "ink.html")
     
     get "/easteregg/@page":
-        let filePath = localSettings.staticDir / "easteregg" / (@"page" & ".html")
+        let sDir = {.cast(gcsafe).}: settings.staticDir
+        let filePath = sDir / "easteregg" / (@"page" & ".html")
         if fileExists(filePath):
             resp readFile(filePath)
         else:
