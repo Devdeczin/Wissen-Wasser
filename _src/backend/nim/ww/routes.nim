@@ -93,10 +93,7 @@ routes:
             if rawContent.startsWith("{"):
                 try:
                     let j = parseJson(rawContent)
-                    if j.hasKey("content"):
-                        resp j["content"].getStr(), "text/plain"
-                    else:
-                        resp rawContent, "text/plain"
+                    resp (if j.hasKey("content"): j["content"].getStr() else: rawContent), "text/plain"
                 except:
                     resp rawContent, "text/plain"
             else:

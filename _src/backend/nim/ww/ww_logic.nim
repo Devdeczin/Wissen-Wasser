@@ -1,6 +1,6 @@
 # wissen-wasser/_src/backend/ww/ww_logic.nim
 import json, strutils, times
-import storage, dotww, inkid
+import storage, dotww, inkid, storage
 import ../other/[types, remote_storage]
 
 proc toJsonString(n: JsonNode): string =
@@ -31,30 +31,24 @@ proc l_update_ink*(idStr: string, body: string): JsonNode =
         contentToSave = if j.hasKey("content"): j["content"].getStr() else: body
         if j.hasKey("visibleForAll"): visible = j["visibleForAll"].getBool()
     except:
-        echo " [AVISO] Falha ao processar JSON no update, usando body como texto puro."
         contentToSave = body
 
     var doc: WwDocument
     try:
-        if not inkExists(id):
-            doc = newDotWw(id)
-        else:
-            doc = loadDocument(id)
+        if not inkExists(id): doc = newDotWw(id)
+        else: doc = loadDocument(id)
 
         doc.body.content = contentToSave
         doc.header.updatedAt = nowTs()
         doc.header.visibleForAll = visible
         
         saveDocument(doc)
-        
         try:
             syncToRemote(doc)
-        except:
-            echo " [ERRO] Sincronização remota falhou, mas dado salvo localmente."
+        except: echo " [ERRO] Sync falhou, mas local está OK."
             
         return %*{"status": "ok", "inkid": idStr}
     except Exception as e:
-        echo " [ERRO CRÍTICO] Falha ao salvar documento: ", e.msg
         return %*{"status": "error", "msg": e.msg}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =

@@ -46,17 +46,13 @@ async function initEditor() {
 // 4. MODO KINDLE (Simplificado para performance)
 async function setupKindleEditor(inkId) {
     document.body.classList.add('kindle-mode');
-    const themeLink = document.getElementById('theme-style');
-    if (themeLink) themeLink.href = 'css/inkindle.css';
-
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');
     editor.id = 'editor';
     editor.className = 'kindle-page';
-    editor.contentEditable = (inkId !== '0000-0000').toString();
+    editor.contentEditable = 'true';
     editorContainer.appendChild(editor);
 
-    // Carrega o conteúdo DEPOIS de criar o elemento para evitar travas
     const content = await fetchInkContent(inkId);
     if (inkId === '0000-0000' || inkId === 'TERM-USER') {
         editor.innerHTML = parseFullMarkdown(content);

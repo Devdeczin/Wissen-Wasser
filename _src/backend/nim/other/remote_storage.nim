@@ -1,6 +1,7 @@
 # wissen-wasser/_src/backend/nim/other/remote_storage.nim
 import httpclient, json, strutils, os
-import ../other/[types, config]
+import types, config
+import ../ww/[dotww, storage]
 
 {.cast(gcsafe).}:
     setupConfig()
@@ -105,6 +106,34 @@ proc syncToRemote*(doc: WwDocument) =
     finally:
         c.close()
 
+proc fetchFromRemote*(inkId: string): string =
+    let binId = resolveBinId(inkId)
+    if binId.len == 0: return ""
+
+    let c = newClient()
+    try:
+        let url = "https://api.jsonbin.io/v3/b/" & binId & "/latest"
+        let r = c.get(url)
+        if r.status.startsWith("2"):
+            let data = parseJson(r.body)
+            let record = data["record"]
+            
+            if record.hasKey("content"):
+                let content = record["content"].getStr()
+                try:
+                    var doc = newDotWw(inkId.toInkId())
+                    doc.body.content = content
+                    if record.hasKey("visibleForAll"): 
+                        doc.header.visibleForAll = record["visibleForAll"].getBool()
+                    saveDocument(doc)
+                except: discard
+                return content
+    except:
+        echo " [ERRO] Falha ao ler bin remoto: ", inkId
+    finally:
+        c.close()
+    return ""
+
 proc fetchPublicInks*(): JsonNode =
     result = newJArray()
     let index = fetchIndex()
@@ -123,38 +152,3 @@ proc fetchPublicInks*(): JsonNode =
         echo " [ERRO] Falha ao varrer inks públicos."
     finally:
         c.close()
-
-proc l_update_ink*(idStr: string, body: string): JsonNode =
-    let id = idStr.toInkId()
-    var contentToSave = ""
-    var visible = false
-    
-    try:
-        let j = parseJson(body)
-        contentToSave = if j.hasKey("content"): j["content"].getStr() else: body
-        if j.hasKey("visibleForAll"): visible = j["visibleForAll"].getBool()
-    except:
-        echo " [AVISO] Falha ao processar JSON no update, usando body como texto puro."
-        contentToSave = body
-
-    var doc: WwDocument
-    try:
-        if not inkExists(id):
-            doc = newDotWw(id)
-        else:
-            doc = loadDocument(id)
-
-        doc.body.content = contentToSave
-        doc.header.updatedAt = nowTs()
-        doc.header.visibleForAll = visible
-        
-        saveDocument(doc)
-        try:
-            syncToRemote(doc)
-        except:
-            echo " [ERRO] Sincronização remota falhou, mas dado salvo localmente."
-            
-        return %*{"status": "ok", "inkid": idStr}
-    except Exception as e:
-        echo " [ERRO CRÍTICO] Falha ao salvar documento: ", e.msg
-        return %*{"status": "error", "msg": e.msg}
