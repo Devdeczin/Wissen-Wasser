@@ -90,14 +90,17 @@ routes:
         if rawContent == "": 
             resp Http404, "Não encontrado."
         else:
-            try:
-                let j = parseJson(rawContent)
-                if j.hasKey("content"):
-                    resp Http200, j["content"].getStr(), "text/plain"
-                else:
-                    resp Http200, rawContent, "text/plain"
-            except:
-                resp Http200, rawContent, "text/plain"
+            if rawContent.startsWith("{"):
+                try:
+                    let j = parseJson(rawContent)
+                    if j.hasKey("content"):
+                        resp j["content"].getStr(), "text/plain"
+                    else:
+                        resp rawContent, "text/plain"
+                except:
+                    resp rawContent, "text/plain"
+            else:
+                resp rawContent, "text/plain"
 
     get "/api/ink/@id":
         let rawContent = l_get_ink_content(@"id")

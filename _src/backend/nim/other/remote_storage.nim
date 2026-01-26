@@ -124,27 +124,37 @@ proc fetchPublicInks*(): JsonNode =
     finally:
         c.close()
 
-proc fetchFromRemote*(inkId: string): string =
-    # 1. Descobre qual o Bin ID associado a esse Ink ID
-    let binId = resolveBinId(inkId)
-    if binId.len == 0: 
-        echo " [DEBUG] InkID não mapeado no índice: ", inkId
-        return ""
-
-    let c = newClient()
+proc l_update_ink*(idStr: string, body: string): JsonNode =
+    let id = idStr.toInkId()
+    var contentToSave = ""
+    var visible = false
+    
     try:
-        let url = "https://api.jsonbin.io/v3/b/" & binId & "/latest"
-        let r = c.get(url)
-        if r.status.startsWith("2"):
-            let data = parseJson(r.body)
-            # O JSONBin retorna os dados dentro de "record"
-            let record = data["record"]
-            if record.hasKey("content"):
-                return record["content"].getStr()
-            else:
-                return $record # Fallback
+        let j = parseJson(body)
+        contentToSave = if j.hasKey("content"): j["content"].getStr() else: body
+        if j.hasKey("visibleForAll"): visible = j["visibleForAll"].getBool()
     except:
-        echo " [ERRO] Falha ao ler bin remoto: ", binId
-    finally:
-        c.close()
-    return ""
+        echo " [AVISO] Falha ao processar JSON no update, usando body como texto puro."
+        contentToSave = body
+
+    var doc: WwDocument
+    try:
+        if not inkExists(id):
+            doc = newDotWw(id)
+        else:
+            doc = loadDocument(id)
+
+        doc.body.content = contentToSave
+        doc.header.updatedAt = nowTs()
+        doc.header.visibleForAll = visible
+        
+        saveDocument(doc)
+        try:
+            syncToRemote(doc)
+        except:
+            echo " [ERRO] Sincronização remota falhou, mas dado salvo localmente."
+            
+        return %*{"status": "ok", "inkid": idStr}
+    except Exception as e:
+        echo " [ERRO CRÍTICO] Falha ao salvar documento: ", e.msg
+        return %*{"status": "error", "msg": e.msg}
