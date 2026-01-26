@@ -3,32 +3,7 @@ const editorContainer = document.getElementById('editor-container');
 const urlParams = new URLSearchParams(window.location.search);
 const isKindle = /kindle|silk/i.test(navigator.userAgent) || urlParams.get('mode') === 'kindle';
 
-async function initEditor() {
-    const inkId = urlParams.get('id') || 'temp-ink';
-    const display = document.getElementById('ink-id-display');
-    
-    if (display) {
-        display.innerText = (inkId === '0000-0000') ? "MODO: LEITURA" : `ID: ${inkId}`;
-    }
-
-    if (inkId === '0000-0000') {
-        const publicToggle = document.getElementById('public-toggle');
-        if (publicToggle) publicToggle.parentElement.style.display = 'none';
-        const saveBtn = document.getElementById('save-btn');
-        if (saveBtn) saveBtn.style.opacity = "0.5";
-    }
-
-    if (isKindle) {
-        await setupKindleEditor(inkId);
-    } else {
-        await setupA4Editor(inkId);
-    }
-
-    setupGlobalShortcuts();
-    setupAutoSave(inkId);
-}
-
-// Parser Unificado (Markdown + Kindle Tags)
+// 1. PARSER (Markdown + Kindle Tags)
 function parseFullMarkdown(text) {
     if (!text) return "";
     return text
@@ -41,56 +16,95 @@ function parseFullMarkdown(text) {
         .replace(/<\/ul>\s*<ul>/gim, '');
 }
 
+// 2. UTILITÁRIOS DE CRIAÇÃO
+function createPage() {
+    const div = document.createElement('div');
+    div.className = 'page';
+    div.contentEditable = 'true';
+    return div;
+}
+
+// 3. INICIALIZADOR PRINCIPAL
+async function initEditor() {
+    const inkId = urlParams.get('id') || 'temp-ink';
+    
+    // UI Update básica
+    const display = document.getElementById('ink-id-display');
+    if (display) display.innerText = (inkId === '0000-0000') ? "MODO: LEITURA" : `ID: ${inkId}`;
+
+    // Escolha do modo (Kindle vs A4)
+    if (isKindle) {
+        await setupKindleEditor(inkId);
+    } else {
+        await setupA4Editor(inkId);
+    }
+
+    setupGlobalShortcuts();
+    setupAutoSave(inkId);
+}
+
+// 4. MODO KINDLE (Simplificado para performance)
 async function setupKindleEditor(inkId) {
     document.body.classList.add('kindle-mode');
     const themeLink = document.getElementById('theme-style');
     if (themeLink) themeLink.href = 'css/inkindle.css';
-    document.querySelectorAll('.desktop-only').forEach(el => el.remove());
 
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');
     editor.id = 'editor';
+    editor.className = 'kindle-page';
     editor.contentEditable = (inkId !== '0000-0000').toString();
-    editor.spellcheck = false;
-    
+    editorContainer.appendChild(editor);
+
+    // Carrega o conteúdo DEPOIS de criar o elemento para evitar travas
     const content = await fetchInkContent(inkId);
     if (inkId === '0000-0000' || inkId === 'TERM-USER') {
         editor.innerHTML = parseFullMarkdown(content);
+        editor.contentEditable = 'false';
     } else {
         editor.innerText = content || "";
     }
-    editorContainer.appendChild(editor);
 }
 
+// 5. MODO DESKTOP (A4 com quebra de página)
 async function setupA4Editor(inkId) {
     editorContainer.innerHTML = '';
-    const content = await fetchInkContent(inkId);
-    
     let currentPage = createPage();
     editorContainer.appendChild(currentPage);
+
+    const content = await fetchInkContent(inkId);
 
     if (inkId === '0000-0000' || inkId === 'TERM-USER') {
         currentPage.contentEditable = 'false';
         currentPage.innerHTML = parseFullMarkdown(content);
-
+        
+        // Timeout para processar as múltiplas páginas
         setTimeout(() => {
-            while (currentPage.scrollHeight > currentPage.offsetHeight) {
+            let page = currentPage;
+            while (page.scrollHeight > page.offsetHeight) {
                 const nextPage = createPage();
                 nextPage.contentEditable = 'false';
                 editorContainer.appendChild(nextPage);
-
-                while (currentPage.scrollHeight > currentPage.offsetHeight && currentPage.lastChild) {
-                    nextPage.insertBefore(currentPage.lastChild, nextPage.firstChild);
+                while (page.scrollHeight > page.offsetHeight && page.lastChild) {
+                    nextPage.insertBefore(page.lastChild, nextPage.firstChild);
                 }
-                currentPage = nextPage;
+                page = nextPage;
             }
-        }, 50);
+        }, 100);
     } else {
         currentPage.innerText = content || "";
+        currentPage.focus();
     }
 
+    // Listener para Markdown dinâmico e novas páginas
     editorContainer.addEventListener('input', (e) => {
         const activePage = e.target;
+        if (!activePage.classList.contains('page')) return;
+
+        // MD dinâmico ao digitar espaço
+        if (e.data === ' ') handleMarkdown(activePage);
+
+        // Auto-quebra de página
         if (activePage.scrollHeight > activePage.offsetHeight) {
             const newPage = createPage();
             editorContainer.appendChild(newPage);
@@ -99,32 +113,35 @@ async function setupA4Editor(inkId) {
     });
 }
 
-function createPage() {
-    const div = document.createElement('div');
-    div.className = 'page';
-    div.contentEditable = 'true';
-    return div;
-}
-
+// 6. LOGICA DE MARKDOWN EM TEMPO REAL
 function handleMarkdown(element) {
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    if (!selection || !selection.rangeCount) return;
+    
     const range = selection.getRangeAt(0);
     const textNode = range.startContainer;
     const content = textNode.textContent;
-    const patterns = [{ reg: /^#\s/, tag: 'h1' }, { reg: /^##\s/, tag: 'h2' }, { reg: /^-\s/, tag: 'insertUnorderedList' }];
+
+    const patterns = [
+        { reg: /^#\s/, tag: 'h1' },
+        { reg: /^##\s/, tag: 'h2' },
+        { reg: /^-\s/, tag: 'insertUnorderedList' }
+    ];
 
     patterns.forEach(p => {
         if (p.reg.test(content)) {
-            document.execCommand(p.tag.startsWith('insert') ? p.tag : 'formatBlock', false, p.tag.startsWith('insert') ? null : p.tag);
+            const command = p.tag.startsWith('insert') ? p.tag : 'formatBlock';
+            document.execCommand(command, false, p.tag.startsWith('insert') ? null : p.tag);
             textNode.textContent = content.replace(p.reg, '');
         }
     });
 }
 
+// 7. AUXILIARES DE SISTEMA
 function getAllPagesContent() {
     const kindleEditor = document.getElementById('editor');
     if (kindleEditor) return kindleEditor.innerText;
+    
     const pages = document.querySelectorAll('.page');
     return Array.from(pages).map(p => p.innerText).join('\n');
 }
@@ -142,4 +159,5 @@ function setupGlobalShortcuts() {
         }
     });
 }
+
 window.onload = initEditor;
