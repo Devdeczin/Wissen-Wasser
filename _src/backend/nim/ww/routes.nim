@@ -86,18 +86,29 @@ routes:
         resp Http201, l_create_ink(request.body), "application/json"
     
     get "/ink/@id":
-        let content = l_get_ink_content(@"id")
-        if content == "": resp Http404, "Não encontrado."
-        else: resp Http200, content, "application/json"
-        
-    post "/ink/@id":
-        if @"id" == "temp-ink": resp Http400, "ID inválido"
-        resp Http200, $(l_update_ink(@"id", request.body)), "application/json"
+        let rawContent = l_get_ink_content(@"id")
+        if rawContent == "": 
+            resp Http404, "Não encontrado."
+        else:
+            try:
+                let j = parseJson(rawContent)
+                if j.hasKey("content"):
+                    resp Http200, j["content"].getStr(), "text/plain"
+                else:
+                    resp Http200, rawContent, "text/plain"
+            except:
+                resp Http200, rawContent, "text/plain"
 
     get "/api/ink/@id":
-        let content = l_get_ink_content(@"id")
-        if content == "": resp Http404, $(%*{"error": "not found"})
-        else: resp Http200, $(%*{"content": content}), "application/json"
+        let rawContent = l_get_ink_content(@"id")
+        if rawContent == "": 
+            resp Http404, $(%*{"error": "not found"})
+        else:
+            try:
+                let j = parseJson(rawContent)
+                resp Http200, $(%*{"content": j["content"].getStr()}), "application/json"
+            except:
+                resp Http200, $(%*{"content": rawContent}), "application/json"
 
     post "/ink/@id/overwrite":
         resp Http200, l_overwrite_ink(@"id", request.body), "application/json"

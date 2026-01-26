@@ -10,26 +10,25 @@ async function fetchInkContent(id) {
         } catch (err) { return "# Erro ao carregar documento."; }
     }
 
-    // 2. Cache Local com Limpeza de Segurança
     let localCache = localStorage.getItem('cache_' + id) || "";
-    if (localCache.startsWith('{"content"')) {
+    
+    if (localCache.includes('"content":')) {
         try {
-            const parsed = JSON.parse(localCache);
-            localCache = parsed.content || "";
-        } catch(e) { localCache = ""; }
+            const temp = JSON.parse(localCache);
+            localCache = temp.content || "";
+        } catch(e) {}
     }
 
-    // 3. Busca Remota
     try {
-        const response = await fetch(`/api/ink/${id}`);
+        const response = await fetch(`/ink/${id}`);
         if (response.ok) {
-            const data = await response.json();
-            const content = data.content || "";
+            const content = await response.text();
             localStorage.setItem('cache_' + id, content);
             return content;
         }
-    } catch (err) { console.warn("Offline ou Erro de Rede"); }
-
+    } catch (err) {
+        console.warn("Usando cache local limpo.");
+    }
     return localCache;
 }
 
