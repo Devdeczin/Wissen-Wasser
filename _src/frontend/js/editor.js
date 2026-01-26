@@ -59,6 +59,14 @@ function setupKindleEditor(inkId) {
         editor.innerText = content || "";
     });
 
+    fetchInkContent(inkId).then(content => {
+        if (inkId === '0000-0000' || inkId === 'TERM-USER') {
+            editor.innerHTML = parseFullMarkdown(content);
+        } else {
+            editor.innerHTML = parseFullMarkdown(content);
+        }
+    });
+
     editorContainer.appendChild(editor);
 }
 
@@ -68,7 +76,15 @@ async function setupA4Editor(inkId) {
     const firstPage = createPage();
     editorContainer.appendChild(firstPage);
 
-    const content = await fetchInkContent(inkId);
+    const content = await fetchInkContent(inkId).then(content => {
+        if (inkId === '0000-0000' || inkId === 'TERM-USER') {
+            editor.innerHTML = parseFullMarkdown(content);
+        } else {
+            editor.innerHTML = parseFullMarkdown(content);
+        }
+    });
+
+
     firstPage.innerText = content || "";
 
     editorContainer.addEventListener('input', (e) => {
@@ -124,6 +140,16 @@ function handleMarkdown(element) {
             textNode.textContent = content.replace(p.reg, '');
         }
     });
+}
+
+function parseStaticMarkdown(text) {
+    if (!text) return "";
+    let html = text
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
+        .replace(/<\/ul>\s*<ul>/gim, ''); 
+    return html;
 }
 
 // --- SALVAMENTO E ATALHOS ---

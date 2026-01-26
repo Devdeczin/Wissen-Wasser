@@ -50,5 +50,35 @@ h1, h2, h3 {
     display: none !important;
 }
 
+.chapter-mark {
+    border-top: 3px solid #000;
+    border-bottom: 3px solid #000;
+    margin: 40px 0 20px 0;
+    padding: 10px 0;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    width: 100%;
+}
+
+/* Bloco de Notas */
+.note-block {
+    background: #f0f0f0; /* No Kindle fica um cinza claro */
+    border-left: 10px solid #333;
+    padding: 15px;
+    margin: 20px 0;
+    font-style: italic;
+    font-size: 0.95em;
+}
+
+/* Tag de Revisão */
+.fix-me {
+    background-color: #000;
+    color: #fff;
+    padding: 2px 5px;
+    font-weight: bold;
+    border-radius: 3px;
+}
+
 /* Ajuste de links */
 a { color: #000; text-decoration: underline; font-weight: bold; }
