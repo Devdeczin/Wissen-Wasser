@@ -2,8 +2,8 @@
 async function fetchInkContent(id) {
     // 1. IDs especiais buscam arquivos .md estáticos
     const specialIds = {
-        '0000-0000': '/docs/manual.md',
-        'TERM-USER': '/docs/terms.md'
+        '0000-0000': 'docs/manual.md',
+        'TERM-USER': 'docs/terms.md'
     };
 
     if (specialIds[id]) {
