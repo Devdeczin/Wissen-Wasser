@@ -3,20 +3,20 @@ import jester, json, strutils, os, sequtils
 import inkid, ww_logic, storage
 import ../other/[config, types, remote_storage]
 
-# 1. Setup inicial seguro
 {.cast(gcsafe).}:
     setupConfig()
 
-# 2. Configurações do Jester
 settings:
     port = conf.port.Port
     bindAddr = "0.0.0.0"
     staticDir = "frontend"
 
-# 3. Bloco de Rotas (O cast(gcsafe) aqui mata todos os erros de 'settings' e 'async')
 {.cast(gcsafe).}:
     routes:
         # --- FRONTEND ---
+        get "/":
+            resp readFile(settings.staticDir / "index.html")
+
         get "/easteregg/daumreal":
             let apiKey = getEnv("INVERTEXTO_API_KEY")
             let pixKey = getEnv("PIX_DEVDECO_DINHEIRO")
@@ -30,9 +30,6 @@ settings:
                 resp html, "text/html"
             else:
                 resp(Http404, "Template não encontrado")
-
-        get "/":
-            resp readFile(settings.staticDir / "index.html")
 
         get "/limpa":
             resp """
@@ -90,8 +87,7 @@ settings:
             resp Http201, l_create_ink(request.body), "application/json"
         
         get "/ink/@id":
-            let id = @"id"
-            let content = l_get_ink_content(id)
+            let content = l_get_ink_content(@"id")
             if content == "":
                 resp Http404, "Ink não encontrado."
             else:
