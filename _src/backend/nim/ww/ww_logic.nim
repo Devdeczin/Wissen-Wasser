@@ -23,29 +23,39 @@ proc l_create_ink*(body: string): string =
 
 proc l_update_ink*(idStr: string, body: string): JsonNode =
     let id = idStr.toInkId()
-    var j: JsonNode
+    var contentToSave = ""
+    var visible = false
     
     try:
-        j = parseJson(body)
+        let j = parseJson(body)
+        contentToSave = if j.hasKey("content"): j["content"].getStr() else: body
+        if j.hasKey("visibleForAll"): visible = j["visibleForAll"].getBool()
     except:
-        echo " [AVISO] Body não é JSON válido, tratando como texto."
-        j = %*{"content": body}
+        echo " [AVISO] Falha ao processar JSON no update, usando body como texto puro."
+        contentToSave = body
 
     var doc: WwDocument
-    if not inkExists(id):
-        doc = newDotWw(id)
-    else:
-        doc = loadDocument(id)
+    try:
+        if not inkExists(id):
+            doc = newDotWw(id)
+        else:
+            doc = loadDocument(id)
 
-    if j.hasKey("content"):
-        doc.body.content = j["content"].getStr()
-    else:
-        doc.body.content = body # Fallback final
-
-    doc.header.updatedAt = nowTs()
-    saveDocument(doc)
-    syncToRemote(doc)
-    return %*{"status": "ok"}
+        doc.body.content = contentToSave
+        doc.header.updatedAt = nowTs()
+        doc.header.visibleForAll = visible
+        
+        saveDocument(doc)
+        
+        try:
+            syncToRemote(doc)
+        except:
+            echo " [ERRO] Sincronização remota falhou, mas dado salvo localmente."
+            
+        return %*{"status": "ok", "inkid": idStr}
+    except Exception as e:
+        echo " [ERRO CRÍTICO] Falha ao salvar documento: ", e.msg
+        return %*{"status": "error", "msg": e.msg}
 
 proc l_overwrite_ink*(idStr: string, body: string): string =
     let id = toInkId(idStr)
