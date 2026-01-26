@@ -1,36 +1,25 @@
 // wissen-wasser/_src/frontend/js/editor.js
 const editorContainer = document.getElementById('editor-container');
 const urlParams = new URLSearchParams(window.location.search);
-
-// Detecção: A  penas Kindle/Silk real ou se forçado via URL (?mode=kindle)
 const isKindle = /kindle|silk/i.test(navigator.userAgent) || urlParams.get('mode') === 'kindle';
 
 async function initEditor() {
-    // 1. Captura o ID da URL antes de qualquer coisa
-    const urlParams = new URLSearchParams(window.location.search);
     const inkId = urlParams.get('id') || 'temp-ink';
-
-    console.log("Editor carregado com ID:", inkId);
-
-    // 2. Atualiza a interface visual IMEDIATAMENTE
     const display = document.getElementById('ink-id-display');
+    
     if (display) {
         display.innerText = (inkId === '0000-0000') ? "MODO: LEITURA" : `ID: ${inkId}`;
     }
 
-    // 3. Bloqueia salvamento e checkbox se for o manual
     if (inkId === '0000-0000') {
         const publicToggle = document.getElementById('public-toggle');
         if (publicToggle) publicToggle.parentElement.style.display = 'none';
-        
-        // Desativa o botão salvar visualmente para o manual
         const saveBtn = document.getElementById('save-btn');
         if (saveBtn) saveBtn.style.opacity = "0.5";
     }
 
-    // 4. Inicializa o editor específico (Kindle ou Desktop)
     if (isKindle) {
-        setupKindleEditor(inkId);
+        await setupKindleEditor(inkId);
     } else {
         await setupA4Editor(inkId);
     }
@@ -39,68 +28,72 @@ async function initEditor() {
     setupAutoSave(inkId);
 }
 
-// --- MODO KINDLE ---
-function setupKindleEditor(inkId) {
-    document.body.classList.add('kindle-mode'); // Adiciona a classe que você criou no style
-    
+// Parser Unificado (Markdown + Kindle Tags)
+function parseFullMarkdown(text) {
+    if (!text) return "";
+    return text
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
+        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+        .replace(/^cap:\s*(.*$)/gim, '<div class="chapter-mark"><span>Capítulo: $1</span></div>')
+        .replace(/^note:\s*(.*$)/gim, '<aside class="note-block"><strong>Nota:</strong> $1</aside>')
+        .replace(/<\/ul>\s*<ul>/gim, '');
+}
+
+async function setupKindleEditor(inkId) {
+    document.body.classList.add('kindle-mode');
     const themeLink = document.getElementById('theme-style');
     if (themeLink) themeLink.href = 'css/inkindle.css';
-
-    // Remove elementos que o Kindle não aguenta
     document.querySelectorAll('.desktop-only').forEach(el => el.remove());
 
     editorContainer.innerHTML = '';
     const editor = document.createElement('div');
     editor.id = 'editor';
-    editor.contentEditable = 'true';
-    editor.spellcheck = false; // Essencial para reduzir lag no Kindle
+    editor.contentEditable = (inkId !== '0000-0000').toString();
+    editor.spellcheck = false;
     
-    fetchInkContent(inkId).then(content => {
+    const content = await fetchInkContent(inkId);
+    if (inkId === '0000-0000' || inkId === 'TERM-USER') {
+        editor.innerHTML = parseFullMarkdown(content);
+    } else {
         editor.innerText = content || "";
-    });
-
-    fetchInkContent(inkId).then(content => {
-        if (inkId === '0000-0000' || inkId === 'TERM-USER') {
-            editor.innerHTML = parseFullMarkdown(content);
-        } else {
-            editor.innerHTML = parseFullMarkdown(content);
-        }
-    });
-
+    }
     editorContainer.appendChild(editor);
 }
 
-// --- MODO DESKTOP (A4) ---
 async function setupA4Editor(inkId) {
     editorContainer.innerHTML = '';
-    const firstPage = createPage();
-    editorContainer.appendChild(firstPage);
+    const content = await fetchInkContent(inkId);
+    
+    let currentPage = createPage();
+    editorContainer.appendChild(currentPage);
 
-    const content = await fetchInkContent(inkId).then(content => {
-        if (inkId === '0000-0000' || inkId === 'TERM-USER') {
-            editor.innerHTML = parseFullMarkdown(content);
-        } else {
-            editor.innerHTML = parseFullMarkdown(content);
-        }
-    });
+    if (inkId === '0000-0000' || inkId === 'TERM-USER') {
+        currentPage.contentEditable = 'false';
+        currentPage.innerHTML = parseFullMarkdown(content);
 
+        setTimeout(() => {
+            while (currentPage.scrollHeight > currentPage.offsetHeight) {
+                const nextPage = createPage();
+                nextPage.contentEditable = 'false';
+                editorContainer.appendChild(nextPage);
 
-    firstPage.innerText = content || "";
+                while (currentPage.scrollHeight > currentPage.offsetHeight && currentPage.lastChild) {
+                    nextPage.insertBefore(currentPage.lastChild, nextPage.firstChild);
+                }
+                currentPage = nextPage;
+            }
+        }, 50);
+    } else {
+        currentPage.innerText = content || "";
+    }
 
     editorContainer.addEventListener('input', (e) => {
         const activePage = e.target;
-        if (!activePage.classList.contains('page')) return;
-
-        // MD dinâmico ao digitar espaço
-        if (e.data === ' ') {
-            handleMarkdown(activePage);
-        }
-
-        // Quebra de página A4
         if (activePage.scrollHeight > activePage.offsetHeight) {
             const newPage = createPage();
             editorContainer.appendChild(newPage);
-            if (activePage.lastChild) newPage.appendChild(activePage.lastChild);
             newPage.focus();
         }
     });
@@ -113,71 +106,32 @@ function createPage() {
     return div;
 }
 
-// --- PARSER MARKDOWN ESTÁVEL ---
 function handleMarkdown(element) {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-    
     const range = selection.getRangeAt(0);
     const textNode = range.startContainer;
     const content = textNode.textContent;
-
-    // Regex para identificar padrões no início do nó de texto
-    const patterns = [
-        { reg: /^#\s/, tag: 'h1' },
-        { reg: /^##\s/, tag: 'h2' },
-        { reg: /^-\s/, tag: 'insertUnorderedList' }
-    ];
+    const patterns = [{ reg: /^#\s/, tag: 'h1' }, { reg: /^##\s/, tag: 'h2' }, { reg: /^-\s/, tag: 'insertUnorderedList' }];
 
     patterns.forEach(p => {
         if (p.reg.test(content)) {
-            if (p.tag.startsWith('insert')) {
-                document.execCommand(p.tag, false, null);
-            } else {
-                document.execCommand('formatBlock', false, p.tag);
-            }
-            // Remove o símbolo do MD após converter
+            document.execCommand(p.tag.startsWith('insert') ? p.tag : 'formatBlock', false, p.tag.startsWith('insert') ? null : p.tag);
             textNode.textContent = content.replace(p.reg, '');
         }
     });
 }
 
-function parseStaticMarkdown(text) {
-    if (!text) return "";
-    let html = text
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
-        .replace(/<\/ul>\s*<ul>/gim, ''); 
-    return html;
-}
-
-// --- SALVAMENTO E ATALHOS ---
-function setupAutoSave(inkId) {
-    if (inkId === '0000-0000') return;
-
-    // No Kindle, aumentamos o intervalo ou desativamos o autosave agressivo
-    const interval = isKindle ? 180000 : 60000; // 3 minutos no Kindle, 1 no PC
-
-    setInterval(() => {
-        if (document.activeElement.id !== 'editor') {
-            manualSave();
-        }
-    }, interval);
-}
-
 function getAllPagesContent() {
-    // Tenta pegar do editor único (Kindle)
     const kindleEditor = document.getElementById('editor');
     if (kindleEditor) return kindleEditor.innerText;
-
-    // Tenta pegar das páginas (A4)
     const pages = document.querySelectorAll('.page');
-    if (pages.length > 0) {
-        return Array.from(pages).map(p => p.innerText).join('\n');
-    }
+    return Array.from(pages).map(p => p.innerText).join('\n');
+}
 
-    return ""; // Fallback
+function setupAutoSave(inkId) {
+    if (inkId === '0000-0000') return;
+    setInterval(() => manualSave(), isKindle ? 180000 : 60000);
 }
 
 function setupGlobalShortcuts() {
@@ -188,5 +142,4 @@ function setupGlobalShortcuts() {
         }
     });
 }
-
 window.onload = initEditor;

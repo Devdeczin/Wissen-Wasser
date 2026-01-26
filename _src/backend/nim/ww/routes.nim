@@ -67,6 +67,16 @@ routes:
             resp Http200, $fetchPublicInks(), "application/json"
         except:
             resp Http200, "[]", "application/json"
+    
+    get "/docs/manual.md":
+        let path = getStaticDir() / "docs" / "manual.md"
+        if fileExists(path): resp readFile(path), "text/markdown"
+        else: resp Http404, "Manual não encontrado."
+
+    get "/docs/terms.md":
+        let path = getStaticDir() / "docs" / "terms.md"
+        if fileExists(path): resp readFile(path), "text/markdown"
+        else: resp Http404, "Termos não encontrados."
 
     # --- API ---
     get "/ping":

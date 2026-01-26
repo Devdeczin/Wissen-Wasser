@@ -59,28 +59,15 @@ button:hover { background: #30363d; border-color: #8b949e; }
 
 .page {
     width: 210mm;
-    height: 297mm; /* Tamanho A4 Real */
+    height: 297mm;
+    padding: 20mm;
+    margin: 10mm auto;
     background: white;
-    color: #1a1a1a;
-    padding: 25mm;
-    margin-bottom: 30px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
-    outline: none;
-    overflow: hidden; /* Corta o texto para o JS criar nova página */
-    line-height: 1.6;
-    font-size: 18px;
-    white-space: pre-wrap;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden; /* CRUCIAL: Impede que o texto apareça fora da folha */
     word-wrap: break-word;
-}
-
-/* Esconder páginas extras vazias no Kindle se necessário */
-@media (max-width: 600px) {
-    .page {
-        width: 100%;
-        height: auto;
-        padding: 20px;
-        box-shadow: none;
-    }
+    position: relative;
+    box-sizing: border-box; /* Garante que o padding não aumente o tamanho da folha */
 }
 
 /* Placeholder dark */
